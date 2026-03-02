@@ -7,7 +7,7 @@ export default function SupportPage() {
   const options = [
     {
       // Custom icon — put your image at public/icons/discord.png
-      iconImg: "/synthx.png",
+      iconImg: "/synthx.jpg",
       title: "SynthX Development",
       desc: "Join our community server for real-time support from staff and the community.",
       href: "https://discord.gg/WKX5HHPmWz",
