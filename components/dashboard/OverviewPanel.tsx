@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   Wifi, WifiOff, RefreshCw, Shield, Settings2, Star, Bell,
   Users2, UserPlus, Hammer, Ticket, Moon, Hash, Mic, Crown,
-  Zap, ShieldCheck, Clock, BarChart3,
+  Zap, ShieldCheck, Clock, BarChart3, Edit2, Check, X, Bot,
+  Loader2, Save,
 } from "lucide-react";
 
 interface Props {
@@ -27,18 +28,14 @@ interface ServerStats {
   verificationLevel: string;
 }
 
-function StatCard({
-  icon: Icon, label, value, sub, color,
-}: {
+function StatCard({ icon: Icon, label, value, sub, color }: {
   icon: React.ElementType; label: string;
   value: string | number; sub?: string; color: string;
 }) {
   return (
     <div className="card p-4 flex items-center gap-3">
-      <div
-        className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-        style={{ background: `${color}1a`, border: `1px solid ${color}33` }}
-      >
+      <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+        style={{ background: `${color}1a`, border: `1px solid ${color}33` }}>
         <Icon size={17} style={{ color }} />
       </div>
       <div className="min-w-0">
@@ -50,9 +47,62 @@ function StatCard({
   );
 }
 
+function InlineEdit({ value, onSave, placeholder, icon: Icon, label }: {
+  value: string; onSave: (v: string) => Promise<boolean>;
+  placeholder?: string; icon?: React.ElementType; label: string;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [local, setLocal] = useState(value);
+  const [saving, setSaving] = useState(false);
+  const [ok, setOk] = useState(false);
+
+  const save = async () => {
+    setSaving(true);
+    const success = await onSave(local);
+    setSaving(false);
+    if (success) {
+      setEditing(false);
+      setOk(true);
+      setTimeout(() => setOk(false), 2500);
+    }
+  };
+
+  if (editing) {
+    return (
+      <div className="flex items-center gap-2 flex-1">
+        <input autoFocus value={local} onChange={(e) => setLocal(e.target.value)}
+          placeholder={placeholder}
+          onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") setEditing(false); }}
+          className="input text-sm flex-1" style={{ height: "34px" }} />
+        <button onClick={save} disabled={saving}
+          className="w-8 h-8 flex items-center justify-center rounded-lg bg-green-500/20 border border-green-500/30 text-green-400 hover:bg-green-500/30 transition-colors">
+          {saving ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
+        </button>
+        <button onClick={() => { setEditing(false); setLocal(value); }}
+          className="w-8 h-8 flex items-center justify-center rounded-lg border border-[#2a2a2a] text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-colors">
+          <X size={12} />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-sm text-white font-mono">{value || <span className="text-gray-600 font-sans italic">{placeholder}</span>}</span>
+      {ok && <Check size={12} className="text-green-400" />}
+      <button onClick={() => setEditing(true)}
+        className="text-gray-600 hover:text-red-400 transition-colors">
+        <Edit2 size={12} />
+      </button>
+    </div>
+  );
+}
+
 export default function OverviewPanel({ guildId, isPremium, isOwner, settings, onRefresh }: Props) {
-  const [ping, setPing]   = useState<number | null>(null);
+  const [ping, setPing] = useState<number | null>(null);
   const [botUp, setBotUp] = useState(true);
+  const [prefixSaving, setPrefixSaving] = useState(false);
+  const [nickSaving, setNickSaving] = useState(false);
 
   const fetchPing = async () => {
     try {
@@ -71,14 +121,13 @@ export default function OverviewPanel({ guildId, isPremium, isOwner, settings, o
     return () => clearInterval(t);
   }, []);
 
-  // Safe casts — never use | on types
-  const guild       = (settings.guild       as Record<string, unknown> | undefined) ?? null;
-  const serverStats = (settings.serverStats as ServerStats              | undefined) ?? null;
-  const setup       = (settings.setup       as Record<string, unknown> | undefined) ?? null;
+  const guild       = (settings.guild as Record<string, unknown> | undefined) ?? null;
+  const serverStats = (settings.serverStats as ServerStats | undefined) ?? null;
+  const setup       = (settings.setup as Record<string, unknown> | undefined) ?? null;
 
   const guildIcon = guild ? (guild.icon as string | null) : null;
   const guildName = guild ? (guild.name as string) : `Server ${guildId}`;
-  const prefix    = setup  ? ((setup.prefix as string) || ".") : ".";
+  const prefix    = setup ? ((setup.prefix as string) || ".") : ".";
 
   const iconUrl = guildIcon
     ? `https://cdn.discordapp.com/icons/${guildId}/${guildIcon}.${guildIcon.startsWith("a_") ? "gif" : "png"}?size=128`
@@ -88,12 +137,40 @@ export default function OverviewPanel({ guildId, isPremium, isOwner, settings, o
     ? new Date(serverStats.createdAt).getFullYear()
     : null;
 
+  const savePrefix = async (newPrefix: string): Promise<boolean> => {
+    setPrefixSaving(true);
+    try {
+      const res = await fetch(`/api/settings/${guildId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ module: "setup", settings: { ...setup, prefix: newPrefix } }),
+      });
+      const data = await res.json();
+      return res.ok && data.success !== false;
+    } catch { return false; }
+    finally { setPrefixSaving(false); }
+  };
+
+  const saveNickname = async (nick: string): Promise<boolean> => {
+    setNickSaving(true);
+    try {
+      const res = await fetch(`/api/settings/${guildId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ module: "nickname", settings: { nickname: nick } }),
+      });
+      const data = await res.json();
+      return res.ok && data.success !== false;
+    } catch { return false; }
+    finally { setNickSaving(false); }
+  };
+
   const modules = [
     { name: "Anti-Nuke",  icon: Shield,    color: "#f87171", key: "antinuke"  },
     { name: "AutoMod",    icon: Settings2, color: "#fb923c", key: "automod"   },
     { name: "Logging",    icon: Bell,      color: "#818cf8", key: "logging"   },
     { name: "Welcome",    icon: UserPlus,  color: "#34d399", key: "welcome"   },
-    { name: "Leveling",   icon: Star,      color: "#facc15", key: "leveling",  premium: true },
+    { name: "Leveling",   icon: Star,      color: "#facc15", key: "leveling", premium: true },
     { name: "Auto Role",  icon: Users2,    color: "#22d3ee", key: "autorole"  },
     { name: "Moderation", icon: Hammer,    color: "#fbbf24", key: "moderation"},
     { name: "Tickets",    icon: Ticket,    color: "#4ade80", key: "tickets"   },
@@ -103,7 +180,7 @@ export default function OverviewPanel({ guildId, isPremium, isOwner, settings, o
   return (
     <div className="space-y-6 animate-fade-in">
 
-      {/* ── Server Header card ───────────────────────────────── */}
+      {/* ── Server Header ─────────────────────────────────────────── */}
       <div className="card p-5 flex items-center gap-4 flex-wrap">
         <div className="w-16 h-16 rounded-2xl overflow-hidden flex-shrink-0 bg-[#1a1a1a] flex items-center justify-center">
           {iconUrl
@@ -116,11 +193,8 @@ export default function OverviewPanel({ guildId, isPremium, isOwner, settings, o
           <h1 className="text-xl font-bold text-white truncate">{guildName}</h1>
           <p className="text-[11px] text-gray-600 font-mono mt-0.5">{guildId}</p>
           <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-            <span className="text-xs text-gray-500">
-              Prefix: <code className="text-red-400 font-bold">{prefix}</code>
-            </span>
             {isPremium && <span className="pill pill-purple">Premium</span>}
-            {isOwner   && <span className="pill pill-orange">Owner</span>}
+            {isOwner && <span className="pill pill-orange">Owner</span>}
           </div>
         </div>
 
@@ -141,14 +215,36 @@ export default function OverviewPanel({ guildId, isPremium, isOwner, settings, o
         </div>
       </div>
 
-      {/* ── Premium banner ───────────────────────────────────── */}
+      {/* ── Quick Settings ─────────────────────────────────────────── */}
+      <div className="card divide-y divide-[#1e1e1e]">
+        <div className="flex items-center justify-between px-4 py-3 gap-4">
+          <div>
+            <p className="text-sm font-medium text-white">Bot Prefix</p>
+            <p className="text-xs text-gray-500">Command prefix for this server</p>
+          </div>
+          <InlineEdit value={prefix} onSave={savePrefix} placeholder="." label="Prefix" />
+        </div>
+        <div className="flex items-center justify-between px-4 py-3 gap-4">
+          <div>
+            <p className="text-sm font-medium text-white">Bot Nickname</p>
+            <p className="text-xs text-gray-500">Bot's display name in this server</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Bot size={14} className="text-gray-500" />
+            <InlineEdit value={String((settings.botNickname as string) || "")} onSave={saveNickname}
+              placeholder="SynthX" label="Nickname" />
+          </div>
+        </div>
+      </div>
+
+      {/* ── Premium banner ─────────────────────────────────────────── */}
       {isPremium ? (
         <div className="flex items-center gap-3 p-4 rounded-xl"
           style={{ background: "rgba(168,85,247,0.06)", border: "1px solid rgba(168,85,247,0.18)" }}>
           <Star size={18} className="text-purple-400 flex-shrink-0" />
           <div>
             <p className="text-sm font-semibold text-white">Premium Active</p>
-            <p className="text-xs text-gray-500">All premium features are unlocked.</p>
+            <p className="text-xs text-gray-500">All premium features are unlocked for this server.</p>
           </div>
           <span className="ml-auto pill pill-purple">Active</span>
         </div>
@@ -166,7 +262,7 @@ export default function OverviewPanel({ guildId, isPremium, isOwner, settings, o
         </div>
       )}
 
-      {/* ── Server Statistics ────────────────────────────────── */}
+      {/* ── Server Statistics ──────────────────────────────────────── */}
       <div>
         <div className="flex items-center gap-2 mb-3">
           <BarChart3 size={12} className="text-gray-600" />
@@ -174,14 +270,14 @@ export default function OverviewPanel({ guildId, isPremium, isOwner, settings, o
         </div>
         {serverStats ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-            <StatCard icon={Users2}      label="Total Members"   value={(serverStats.memberCount  ?? 0).toLocaleString()} color="#22d3ee" />
-            <StatCard icon={Wifi}        label="Online Now"      value={(serverStats.onlineCount   ?? 0).toLocaleString()} color="#4ade80" />
-            <StatCard icon={Hash}        label="Text Channels"   value={serverStats.textChannels   ?? 0} color="#818cf8" />
-            <StatCard icon={Mic}         label="Voice Channels"  value={serverStats.voiceChannels  ?? 0} color="#fb923c" />
-            <StatCard icon={Crown}       label="Roles"           value={serverStats.roleCount      ?? 0} color="#facc15" />
-            <StatCard icon={Zap}         label="Boosts"          value={serverStats.boostCount     ?? 0} sub={`Tier ${serverStats.boostTier ?? 0}`} color="#c084fc" />
-            <StatCard icon={ShieldCheck} label="Verification"    value={serverStats.verificationLevel ?? "none"} color="#f87171" />
-            <StatCard icon={Clock}       label="Est. Year"       value={createdYear ?? "—"} color="#94a3b8" />
+            <StatCard icon={Users2}      label="Total Members"    value={(serverStats.memberCount ?? 0).toLocaleString()} color="#22d3ee" />
+            <StatCard icon={Wifi}        label="Online Now"       value={(serverStats.onlineCount ?? 0).toLocaleString()} color="#4ade80" />
+            <StatCard icon={Hash}        label="Text Channels"    value={serverStats.textChannels ?? 0} color="#818cf8" />
+            <StatCard icon={Mic}         label="Voice Channels"   value={serverStats.voiceChannels ?? 0} color="#fb923c" />
+            <StatCard icon={Crown}       label="Roles"            value={serverStats.roleCount ?? 0} color="#facc15" />
+            <StatCard icon={Zap}         label="Boosts"           value={serverStats.boostCount ?? 0} sub={`Tier ${serverStats.boostTier ?? 0}`} color="#c084fc" />
+            <StatCard icon={ShieldCheck} label="Verification"     value={serverStats.verificationLevel ?? "none"} color="#f87171" />
+            <StatCard icon={Clock}       label="Est. Year"        value={createdYear ?? "—"} color="#94a3b8" />
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -195,7 +291,7 @@ export default function OverviewPanel({ guildId, isPremium, isOwner, settings, o
         )}
       </div>
 
-      {/* ── Module Status ────────────────────────────────────── */}
+      {/* ── Module Status ──────────────────────────────────────────── */}
       <div>
         <p className="text-xs font-semibold text-gray-600 uppercase tracking-widest mb-3">Module Status</p>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
@@ -224,7 +320,7 @@ export default function OverviewPanel({ guildId, isPremium, isOwner, settings, o
         </div>
       </div>
 
-      {/* ── Config Summary ───────────────────────────────────── */}
+      {/* ── Config Summary ─────────────────────────────────────────── */}
       <div>
         <p className="text-xs font-semibold text-gray-600 uppercase tracking-widest mb-3">Configuration Summary</p>
         <div className="card divide-y divide-[#1e1e1e]">
