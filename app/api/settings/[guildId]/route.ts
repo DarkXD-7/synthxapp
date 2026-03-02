@@ -34,7 +34,7 @@ export async function GET(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // ── Single Discord API call (was 2 before — this halves load time) ────────
+  // ONE Discord API call — used for both permission check AND owner status
   let userGuild: Awaited<ReturnType<typeof getUserGuilds>>[number] | undefined;
   try {
     const userGuilds = await getUserGuilds(session.accessToken as string);
@@ -64,7 +64,7 @@ export async function GET(
 
     const data = await res.json();
 
-    // Attach owner status from the guild we already fetched — no extra API call
+    // Attach owner status from the guild we already fetched — NO second Discord call
     if (data.guild) {
       data.guild.userIsOwner = userGuild.owner;
     }
@@ -101,11 +101,10 @@ export async function POST(
   }
 
   const { module, settings } = body;
-
   if (!module)              return NextResponse.json({ error: "Missing module" },   { status: 400 });
   if (settings === undefined) return NextResponse.json({ error: "Missing settings" }, { status: 400 });
 
-  // Single Discord API call for POST too
+  // ONE Discord API call for POST too
   let userGuild: Awaited<ReturnType<typeof getUserGuilds>>[number] | undefined;
   try {
     const userGuilds = await getUserGuilds(session.accessToken as string);
