@@ -10,15 +10,45 @@ export default function HeroSection() {
 
   return (
     <section className="min-h-screen flex flex-col items-center justify-center px-4 pt-16 pb-12 relative overflow-hidden">
-      {/* Subtle background */}
+      {/* Subtle background glow */}
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full" style={{background:"radial-gradient(circle, rgba(239,68,68,0.04) 0%, transparent 70%)"}} />
+        <div
+          className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full"
+          style={{ background: "radial-gradient(circle, rgba(239,68,68,0.04) 0%, transparent 70%)" }}
+        />
       </div>
 
       <div className="text-center max-w-3xl mx-auto relative z-10">
-        {/* Logo */}
-        <div className="relative w-28 h-28 mx-auto mb-8 rounded-full overflow-hidden border-2 border-[#2a2a2a] bg-[#0f0f0f]">
-          <Image src="/bot-logo.png" alt="SynthX" fill className="object-cover" priority />
+
+        {/* ── Logo with banner background ── */}
+        <div className="relative w-36 h-36 mx-auto mb-8 flex items-center justify-center">
+          {/* Outer glow ring */}
+          <div
+            className="absolute inset-0 rounded-full"
+            style={{
+              background: "radial-gradient(circle, rgba(239,68,68,0.25) 0%, rgba(249,115,22,0.12) 50%, transparent 75%)",
+              filter: "blur(8px)",
+            }}
+          />
+          {/* Banner circle background */}
+          <div
+            className="absolute inset-3 rounded-full"
+            style={{
+              background: "linear-gradient(135deg, rgba(239,68,68,0.15), rgba(249,115,22,0.1))",
+              border: "1px solid rgba(239,68,68,0.25)",
+              backdropFilter: "blur(4px)",
+            }}
+          />
+          {/* Logo image */}
+          <div className="relative w-20 h-20 z-10">
+            <Image
+              src="/bot-logo.png"
+              alt="SynthX"
+              fill
+              className="object-contain drop-shadow-lg"
+              priority
+            />
+          </div>
         </div>
 
         {/* Badge */}
@@ -49,7 +79,8 @@ export default function HeroSection() {
           )}
           <a
             href={`https://discord.com/oauth2/authorize?client_id=${process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID}&permissions=8&scope=bot%20applications.commands`}
-            target="_blank" rel="noopener noreferrer"
+            target="_blank"
+            rel="noopener noreferrer"
             className="btn-secondary text-base px-6 py-3"
           >
             Invite to Server
