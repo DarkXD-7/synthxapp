@@ -17,12 +17,15 @@ function botFetch(path: string, init?: RequestInit) {
       ...(init?.headers ?? {}),
     },
     cache: "no-store",
+    signal: AbortSignal.timeout(12000),
   });
 }
 
-const OWNER_ONLY_MODULES = new Set(["antinuke", "emergency"]);
+// antinuke: owner OR extraowner can manage (bot checks itself too)
+// emergency: server owner only
+const EMERGENCY_ONLY = new Set(["emergency"]);
 
-// ── GET /api/settings/[guildId] ─────────────────────────────────────────────
+// ── GET /api/settings/[guildId] ──────────────────────────────────────────────
 export async function GET(
   _req: NextRequest,
   context: { params: Promise<{ guildId: string }> }
@@ -34,7 +37,7 @@ export async function GET(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // ONE Discord API call — used for both permission check AND owner status
+  // ONE Discord API call
   let userGuild: Awaited<ReturnType<typeof getUserGuilds>>[number] | undefined;
   try {
     const userGuilds = await getUserGuilds(session.accessToken as string);
@@ -64,9 +67,14 @@ export async function GET(
 
     const data = await res.json();
 
-    // Attach owner status from the guild we already fetched — NO second Discord call
+    // Attach owner/extraOwner status — no second Discord API call
     if (data.guild) {
-      data.guild.userIsOwner = userGuild.owner;
+      const isDiscordOwner = userGuild.owner === true;
+      // Check if user is an extraowner (bot returns this in antinuke.extraOwner)
+      const extraOwnerId = data.antinuke?.extraOwner as string | null | undefined;
+      const isExtraOwner = Boolean(extraOwnerId && extraOwnerId === String(session.user?.id ?? ""));
+      data.guild.userIsOwner    = isDiscordOwner || isExtraOwner;
+      data.guild.isDiscordOwner = isDiscordOwner;
     }
 
     return NextResponse.json(data, {
@@ -94,15 +102,12 @@ export async function POST(
   }
 
   let body: { module?: string; settings?: Record<string, unknown> };
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
-  }
+  try { body = await req.json(); }
+  catch { return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 }); }
 
   const { module, settings } = body;
-  if (!module)              return NextResponse.json({ error: "Missing module" },   { status: 400 });
-  if (settings === undefined) return NextResponse.json({ error: "Missing settings" }, { status: 400 });
+  if (!module)    return NextResponse.json({ error: "Missing module" },   { status: 400 });
+  if (!settings)  return NextResponse.json({ error: "Missing settings" }, { status: 400 });
 
   // ONE Discord API call for POST too
   let userGuild: Awaited<ReturnType<typeof getUserGuilds>>[number] | undefined;
@@ -113,15 +118,13 @@ export async function POST(
     return NextResponse.json({ error: "Failed to verify permissions" }, { status: 500 });
   }
 
-  if (!userGuild) {
-    return NextResponse.json({ error: "You are not a member of this server" }, { status: 403 });
-  }
-  if (!hasManageGuild(userGuild)) {
-    return NextResponse.json({ error: "You need Manage Server permission" }, { status: 403 });
-  }
-  if (OWNER_ONLY_MODULES.has(module) && !userGuild.owner) {
+  if (!userGuild) return NextResponse.json({ error: "You are not a member of this server" }, { status: 403 });
+  if (!hasManageGuild(userGuild)) return NextResponse.json({ error: "You need Manage Server permission" }, { status: 403 });
+
+  // Emergency: server owner only
+  if (EMERGENCY_ONLY.has(module) && !userGuild.owner) {
     return NextResponse.json(
-      { error: "Only the server owner can modify this setting", ownerOnly: true },
+      { error: "Only the server owner can use Emergency mode", ownerOnly: true },
       { status: 403 }
     );
   }
@@ -133,7 +136,6 @@ export async function POST(
     });
 
     const data = await res.json();
-
     if (!res.ok) {
       return NextResponse.json(
         { error: data?.error || `Bot API returned ${res.status}` },
