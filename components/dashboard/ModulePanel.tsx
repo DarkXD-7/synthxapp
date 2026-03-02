@@ -18,7 +18,7 @@ interface Props {
   onSave: (module: string, settings: Record<string, unknown>) => void;
 }
 
-// ─── Primitive UI componentss ────────────────────────────────────────────────
+// ─── Primitive UI components ────────────────────────────────────────────────
 
 function RowToggle({ label, desc, checked, onChange, disabled }: {
   label: string; desc?: string; checked: boolean;
@@ -392,10 +392,10 @@ export default function ModulePanel({ moduleId, guildId, isPremium, isOwner, set
       }
       onSave(moduleId, local);
       setSaved(true);
-      setTimeout(() => setSaved(false), 6000);
+      setTimeout(() => setSaved(false), 2000);
     } catch (e: unknown) {
       setErr(e instanceof Error ? e.message : "Save failed");
-      setTimeout(() => setErr(null), 5000);
+      setTimeout(() => setErr(null), 4000);
     }
     setSaving(false);
   };
@@ -728,6 +728,8 @@ export default function ModulePanel({ moduleId, guildId, isPremium, isOwner, set
           const customRoles: CustomRole[] = (sp.customRoles as CustomRole[]) || [];
           return (
             <>
+              <SectionHeader title="Bot Prefix" />
+              <RowInput label="Command Prefix" desc="Bot prefix for this server (default: .)" value={String(sp.prefix || ".")} onChange={(v) => set("prefix", v)} placeholder="." />
               <SectionHeader title="Moderation Roles" />
               <RowRoleSelect label="Mod Role" desc="Users with this role can use moderation commands" roles={roles} value={String(sp.modRole || "")} onChange={(v) => set("modRole", v)} />
               <RowRoleSelect label="Mute / Jail Role" desc="Role assigned when a member is muted or jailed" roles={roles} value={String(sp.muteRole || "")} onChange={(v) => set("muteRole", v)} />
@@ -801,6 +803,7 @@ export default function ModulePanel({ moduleId, guildId, isPremium, isOwner, set
               <SectionHeader title="Channels" />
               <RowSelect label="Tickets Category" desc="Discord category channel where tickets open inside" channels={channels} value={String(tk.categoryId || "")} onChange={(v) => set("categoryId", v)} />
               <RowSelect label="Archive Category" desc="Category where closed tickets are moved" channels={channels} value={String(tk.archiveCat || "")} onChange={(v) => set("archiveCat", v)} />
+              <RowSelect label="Claimed Category" desc="Category where claimed tickets are moved" channels={channels} value={String(tk.claimedCat || "")} onChange={(v) => set("claimedCat", v)} />
               <RowSelect label="Log Channel" desc="Where transcripts and ticket logs are sent" channels={channels} value={String(tk.logChannel || "")} onChange={(v) => set("logChannel", v)} />
 
               <SectionHeader title="Roles" />
@@ -810,7 +813,26 @@ export default function ModulePanel({ moduleId, guildId, isPremium, isOwner, set
               <RowInput label="Panel Title" desc="Title of the embed shown in the ticket panel" value={String(tk.panelTitle || "")} onChange={(v) => set("panelTitle", v)} placeholder="Open a Ticket" />
               <RowTextarea label="Panel Description" desc="Description text on the ticket panel embed" value={String(tk.panelDesc || "")} onChange={(v) => set("panelDesc", v)} placeholder="Select a category to create your ticket." />
               <RowInput label="Panel Color (hex)" desc="Embed color e.g. ef4444" value={String(tk.panelColor || "")} onChange={(v) => set("panelColor", v)} placeholder="0a0a0a" />
-              <RowInput label="Panel Image URL" desc="Optional banner image URL for the panel embed" value={String(tk.panelImage || "")} onChange={(v) => set("panelImage", v)} placeholder="https://..." />
+              <RowInput label="Panel Image URL" desc="Banner image shown at bottom of the embed" value={String(tk.panelImage || "")} onChange={(v) => set("panelImage", v)} placeholder="https://..." />
+              <RowInput label="Panel Thumbnail URL" desc="Small thumbnail shown top-right of the embed" value={String(tk.panelThumbnail || "")} onChange={(v) => set("panelThumbnail", v)} placeholder="https://..." />
+              <div className="section-row">
+                <div>
+                  <p className="text-sm font-medium text-white">Panel Style</p>
+                  <p className="text-xs text-gray-500 mt-0.5">How users select a ticket category</p>
+                </div>
+                <div className="flex gap-2">
+                  {[{v:"select",l:"Dropdown Menu"},{v:"button",l:"Buttons"}].map(opt => (
+                    <button key={opt.v}
+                      onClick={() => set("panelStyle", opt.v)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all border ${
+                        (tk.panelStyle || "select") === opt.v
+                          ? "bg-red-500/20 border-red-500/40 text-red-300"
+                          : "border-[#2a2a2a] text-gray-500 hover:text-white hover:border-[#444]"
+                      }`}
+                    >{opt.l}</button>
+                  ))}
+                </div>
+              </div>
 
               <SectionHeader title="Ticket Categories" />
               <Banner color="gray">Each category creates a separate button/option in the ticket panel. Users pick a category when opening a ticket.</Banner>
@@ -962,10 +984,14 @@ export default function ModulePanel({ moduleId, guildId, isPremium, isOwner, set
             onClick={handleSave}
             disabled={saving || ownerGated}
             title={ownerGated ? "Only the server owner can save" : undefined}
-            className="btn-primary"
+            className="btn-primary transition-all duration-300"
+            style={saved ? {
+              background: "linear-gradient(135deg,#16a34a,#15803d)",
+              boxShadow: "0 0 20px rgba(34,197,94,0.3)"
+            } : {}}
           >
-            {saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
-            {saving ? "Saving…" : ownerGated ? "Owner Only" : "Save Changes"}
+            {saving ? <Loader2 size={15} className="animate-spin" /> : saved ? <CheckCircle size={15} /> : <Save size={15} />}
+            {saving ? "Saving…" : saved ? "Saved!" : ownerGated ? "Owner Only" : "Save Changes"}
           </button>
         </div>
       )}
