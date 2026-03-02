@@ -17,8 +17,8 @@ export default function HeroSection() {
 
       <div className="text-center max-w-3xl mx-auto relative z-10">
         {/* Logo */}
-        <div className="relative w-20 h-20 mx-auto mb-8">
-          <Image src="/bot-logo.png" alt="SynthX" fill className="object-contain" priority />
+        <div className="relative w-28 h-28 mx-auto mb-8 rounded-full overflow-hidden border-2 border-[#2a2a2a] bg-[#0f0f0f]">
+          <Image src="/bot-logo.png" alt="SynthX" fill className="object-cover" priority />
         </div>
 
         {/* Badge */}
