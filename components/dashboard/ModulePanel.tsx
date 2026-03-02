@@ -291,6 +291,71 @@ const LOG_TYPES = [
 
 // ─── Main Component ──────────────────────────────────────────────────────────
 
+// ─── Ticket Panel Sender ────────────────────────────────────────────────────
+function TicketPanelSender({ guildId, channels }: { guildId: string; channels: Channel[] }) {
+  const [channelId, setChannelId] = useState("");
+  const [sending, setSending] = useState(false);
+  const [result, setResult] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  const send = async () => {
+    if (!channelId) return;
+    setSending(true);
+    setResult(null);
+    try {
+      const res = await fetch(`/api/settings/${guildId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ module: "tickets_send_panel", settings: { channelId } }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to send panel");
+      setResult({ type: "success", text: "✅ Ticket panel sent successfully!" });
+    } catch (e: unknown) {
+      setResult({ type: "error", text: e instanceof Error ? e.message : "Failed" });
+    } finally {
+      setSending(false);
+      setTimeout(() => setResult(null), 5000);
+    }
+  };
+
+  const textChannels = channels.filter(c => c.name.startsWith("#"));
+
+  return (
+    <div className="section-row flex flex-col gap-3">
+      <div>
+        <p className="text-sm font-medium text-white">Send Panel to Channel</p>
+        <p className="text-xs text-gray-500 mt-0.5">Sends the ticket panel embed with the open button into a channel. Save your settings first before sending.</p>
+      </div>
+      <div className="flex items-center gap-2 flex-wrap">
+        <select
+          value={channelId}
+          onChange={(e) => setChannelId(e.target.value)}
+          className="input flex-1 min-w-[180px]"
+        >
+          <option value="">— Select a channel —</option>
+          {textChannels.map((c) => (
+            <option key={c.id} value={c.id}>{c.name}</option>
+          ))}
+        </select>
+        <button
+          onClick={send}
+          disabled={!channelId || sending}
+          className="btn-primary whitespace-nowrap"
+          style={{ background: "linear-gradient(135deg,#16a34a,#15803d)" }}
+        >
+          {sending ? <Loader2 size={14} className="animate-spin" /> : <Ticket size={14} />}
+          {sending ? "Sending…" : "Send Panel"}
+        </button>
+      </div>
+      {result && (
+        <div className={`text-xs font-medium px-3 py-2 rounded-lg ${result.type === "success" ? "bg-green-500/10 text-green-400 border border-green-500/20" : "bg-red-500/10 text-red-400 border border-red-500/20"}`}>
+          {result.text}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function ModulePanel({ moduleId, guildId, isPremium, isOwner, settings, onSave }: Props) {
   const meta = META[moduleId];
   const channels = (settings._channels as Channel[]) || [];
@@ -327,9 +392,10 @@ export default function ModulePanel({ moduleId, guildId, isPremium, isOwner, set
       }
       onSave(moduleId, local);
       setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
+      setTimeout(() => setSaved(false), 6000);
     } catch (e: unknown) {
       setErr(e instanceof Error ? e.message : "Save failed");
+      setTimeout(() => setErr(null), 5000);
     }
     setSaving(false);
   };
@@ -655,48 +721,170 @@ export default function ModulePanel({ moduleId, guildId, isPremium, isOwner, set
         })()}
 
         {/* ── SETUP / ROLE TRIGGERS ────────────────────────────── */}
+        {/* ── SETUP / ROLES ──────────────────────────────────── */}
         {moduleId === "setup" && (() => {
           const sp = local;
+          type CustomRole = { id?: number; name: string; roleId: string };
+          const customRoles: CustomRole[] = (sp.customRoles as CustomRole[]) || [];
           return (
             <>
-              <Banner color="gray">Configure role-based command triggers for this server.</Banner>
-              <SectionHeader title="Permission Roles" />
-              <RowRoleSelect label="Admin Role" desc="Users with this role can use admin commands" roles={roles} value={String(sp.adminRole || "")} onChange={(v) => set("adminRole", v)} />
-              <RowRoleSelect label="Mod Role" desc="Users with this role can use mod commands" roles={roles} value={String(sp.modRole || "")} onChange={(v) => set("modRole", v)} />
-              <RowRoleSelect label="Helper Role" desc="Users with this role can use helper commands" roles={roles} value={String(sp.helperRole || "")} onChange={(v) => set("helperRole", v)} />
-              <SectionHeader title="Command Settings" />
-              <RowInput label="Command Prefix" desc="Bot prefix for this server (default: s!)" value={String(sp.prefix || "")} onChange={(v) => set("prefix", v)} placeholder="s!" />
-              <RowSelect label="Bot Commands Channel" desc="Channel where bot commands are allowed" channels={channels} value={String(sp.botChannel || "")} onChange={(v) => set("botChannel", v)} />
-              <SectionHeader title="Custom Triggers" />
-              <Banner color="blue">Custom role triggers are managed via the <code>setup</code> command in Discord.</Banner>
+              <SectionHeader title="Moderation Roles" />
+              <RowRoleSelect label="Mod Role" desc="Users with this role can use moderation commands" roles={roles} value={String(sp.modRole || "")} onChange={(v) => set("modRole", v)} />
+              <RowRoleSelect label="Mute / Jail Role" desc="Role assigned when a member is muted or jailed" roles={roles} value={String(sp.muteRole || "")} onChange={(v) => set("muteRole", v)} />
+              <SectionHeader title="Moderation Channels" />
+              <RowSelect label="Jail Channel" desc="Channel where jailed members are sent" channels={channels} value={String(sp.jailChannel || "")} onChange={(v) => set("jailChannel", v)} />
+              <RowSelect label="Mod Log Channel" desc="Channel where mod actions are logged" channels={channels} value={String(sp.modLogChannel || "")} onChange={(v) => set("modLogChannel", v)} />
+              <SectionHeader title="Custom Roles" />
+              <RowRoleSelect label="Staff Role" desc="General staff / team role" roles={roles} value={String(sp.staffRole || "")} onChange={(v) => set("staffRole", v)} />
+              <RowRoleSelect label="VIP Role" desc="VIP members role" roles={roles} value={String(sp.vipRole || "")} onChange={(v) => set("vipRole", v)} />
+              <RowRoleSelect label="Guest Role" desc="Guest / visitor role" roles={roles} value={String(sp.guestRole || "")} onChange={(v) => set("guestRole", v)} />
+              <RowRoleSelect label="Friend Role" desc="Friend of server role" roles={roles} value={String(sp.friendRole || "")} onChange={(v) => set("friendRole", v)} />
+              <RowRoleSelect label="Girl Role" desc="Girl role" roles={roles} value={String(sp.girlRole || "")} onChange={(v) => set("girlRole", v)} />
+              <RowRoleSelect label="Required Role" desc="Role required to use certain bot commands" roles={roles} value={String(sp.reqRole || "")} onChange={(v) => set("reqRole", v)} />
+              <SectionHeader title="Custom Named Roles" />
+              <Banner color="gray">Create your own named roles for custom commands like <code>+givename @user</code>.</Banner>
+              <div className="space-y-2">
+                {customRoles.map((cr, i) => (
+                  <div key={i} className="card p-3 flex items-center gap-2">
+                    <input
+                      className="input flex-1 text-sm"
+                      placeholder="Role name (e.g. booster)"
+                      value={cr.name}
+                      onChange={(e) => {
+                        const updated = [...customRoles];
+                        updated[i] = { ...cr, name: e.target.value };
+                        set("customRoles", updated);
+                      }}
+                    />
+                    <select
+                      className="input flex-1 text-sm"
+                      value={cr.roleId || ""}
+                      onChange={(e) => {
+                        const updated = [...customRoles];
+                        updated[i] = { ...cr, roleId: e.target.value };
+                        set("customRoles", updated);
+                      }}
+                    >
+                      <option value="">— Select role —</option>
+                      {roles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                    </select>
+                    <button
+                      className="text-gray-600 hover:text-red-400 transition-colors p-1.5 rounded-lg hover:bg-red-500/10"
+                      onClick={() => set("customRoles", customRoles.filter((_, j) => j !== i))}
+                    >✕</button>
+                  </div>
+                ))}
+                <button
+                  className="btn-secondary text-xs w-full mt-1"
+                  onClick={() => set("customRoles", [...customRoles, { name: "", roleId: "" }])}
+                >
+                  + Add Custom Role
+                </button>
+              </div>
             </>
           );
         })()}
 
-        {/* ── TICKET SYSTEM ────────────────────────────────────── */}
+        {/* ── TICKET SYSTEM ──────────────────────────────────────── */}
         {moduleId === "tickets" && (() => {
           const tk = local;
+          type TicketCat = { id?: number; name: string; emoji: string; description: string; roleId: string };
+          const cats: TicketCat[] = (tk.categories as TicketCat[]) || [];
           return (
             <>
+              <SectionHeader title="General" />
               <RowToggle label="Enable Ticket System" desc="Allow members to open support tickets" checked={Boolean(tk.enabled)} onChange={(v) => set("enabled", v)} />
+              <RowNum label="Max Open Tickets Per User" value={Number(tk.maxPerUser ?? 3)} onChange={(v) => set("maxPerUser", v)} min={1} max={20} />
+              <RowNum label="Cooldown (seconds)" value={Number(tk.cooldownSec ?? 60)} onChange={(v) => set("cooldownSec", v)} min={0} max={3600} />
+              <RowNum label="Auto-Close After (hours, 0 = off)" value={Number(tk.autoCloseH ?? 0)} onChange={(v) => set("autoCloseH", v)} min={0} max={168} />
+
               <SectionHeader title="Channels" />
-              <RowSelect label="Ticket Category Channel" desc="Category where new tickets are created" channels={channels} value={String(tk.categoryId || "")} onChange={(v) => set("categoryId", v)} />
-              <RowSelect label="Ticket Log Channel" desc="Where ticket transcripts are sent on close" channels={channels} value={String(tk.logChannel || "")} onChange={(v) => set("logChannel", v)} />
+              <RowSelect label="Tickets Category" desc="Discord category channel where tickets open inside" channels={channels} value={String(tk.categoryId || "")} onChange={(v) => set("categoryId", v)} />
+              <RowSelect label="Archive Category" desc="Category where closed tickets are moved" channels={channels} value={String(tk.archiveCat || "")} onChange={(v) => set("archiveCat", v)} />
+              <RowSelect label="Log Channel" desc="Where transcripts and ticket logs are sent" channels={channels} value={String(tk.logChannel || "")} onChange={(v) => set("logChannel", v)} />
+
               <SectionHeader title="Roles" />
-              <RowMultiRole label="Support Roles" desc="Roles that can see and manage tickets" roles={roles} values={(tk.supportRoles as string[]) || []} onChange={(v) => set("supportRoles", v)} />
-              <SectionHeader title="Customisation" />
-              <RowInput label="Ticket Panel Title" desc="Title shown on the ticket open button" value={String(tk.panelTitle || "")} onChange={(v) => set("panelTitle", v)} placeholder="Support Tickets" />
-              <RowTextarea label="Ticket Panel Description" desc="Text shown in the ticket panel embed"
-                value={String(tk.panelDesc || "")} onChange={(v) => set("panelDesc", v)}
-                placeholder="Click the button below to open a ticket." />
-              <RowTextarea label="Open Message" desc="Message sent inside a newly opened ticket"
-                value={String(tk.openMessage || "")} onChange={(v) => set("openMessage", v)}
-                placeholder="Hello {user}, a staff member will assist you shortly." />
-              <RowNum label="Max Open Tickets Per User" value={Number(tk.maxPerUser ?? 1)} onChange={(v) => set("maxPerUser", v)} min={1} max={10} />
-              <RowToggle label="Save HTML Transcripts" desc="Generate an HTML transcript when a ticket is closed" checked={Boolean(tk.transcripts)} onChange={(v) => set("transcripts", v)} />
-              <UploadField label="Ticket Panel Image" desc="Optional image/banner for the ticket panel" accept="image/*"
-                preview={tk.panelImagePreview as string | undefined}
-                onFile={(f) => { set("panelImagePreview", URL.createObjectURL(f)); set("panelImageFile", f.name); }} />
+              <RowMultiRole label="Support Roles" desc="Roles that can see and manage all tickets" roles={roles} values={(tk.supportRoles as string[]) || []} onChange={(v) => set("supportRoles", v)} />
+
+              <SectionHeader title="Panel Customisation" />
+              <RowInput label="Panel Title" desc="Title of the embed shown in the ticket panel" value={String(tk.panelTitle || "")} onChange={(v) => set("panelTitle", v)} placeholder="Open a Ticket" />
+              <RowTextarea label="Panel Description" desc="Description text on the ticket panel embed" value={String(tk.panelDesc || "")} onChange={(v) => set("panelDesc", v)} placeholder="Select a category to create your ticket." />
+              <RowInput label="Panel Color (hex)" desc="Embed color e.g. ef4444" value={String(tk.panelColor || "")} onChange={(v) => set("panelColor", v)} placeholder="0a0a0a" />
+              <RowInput label="Panel Image URL" desc="Optional banner image URL for the panel embed" value={String(tk.panelImage || "")} onChange={(v) => set("panelImage", v)} placeholder="https://..." />
+
+              <SectionHeader title="Ticket Categories" />
+              <Banner color="gray">Each category creates a separate button/option in the ticket panel. Users pick a category when opening a ticket.</Banner>
+              <div className="space-y-2">
+                {cats.map((cat, i) => (
+                  <div key={i} className="card p-4 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <input
+                        className="input w-16 text-center text-lg"
+                        placeholder="🎫"
+                        value={cat.emoji}
+                        onChange={(e) => {
+                          const updated = [...cats];
+                          updated[i] = { ...cat, emoji: e.target.value };
+                          set("categories", updated);
+                        }}
+                      />
+                      <input
+                        className="input flex-1 text-sm font-medium"
+                        placeholder="Category name (e.g. Support)"
+                        value={cat.name}
+                        onChange={(e) => {
+                          const updated = [...cats];
+                          updated[i] = { ...cat, name: e.target.value };
+                          set("categories", updated);
+                        }}
+                      />
+                      <button
+                        className="text-gray-600 hover:text-red-400 transition-colors p-1.5 rounded-lg hover:bg-red-500/10 flex-shrink-0"
+                        onClick={() => set("categories", cats.filter((_, j) => j !== i))}
+                      >✕</button>
+                    </div>
+                    <input
+                      className="input w-full text-sm text-gray-400"
+                      placeholder="Short description shown in dropdown (optional)"
+                      value={cat.description || ""}
+                      onChange={(e) => {
+                        const updated = [...cats];
+                        updated[i] = { ...cat, description: e.target.value };
+                        set("categories", updated);
+                      }}
+                    />
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-600 w-24 flex-shrink-0">Category Role</span>
+                      <select
+                        className="input flex-1 text-sm"
+                        value={cat.roleId || ""}
+                        onChange={(e) => {
+                          const updated = [...cats];
+                          updated[i] = { ...cat, roleId: e.target.value };
+                          set("categories", updated);
+                        }}
+                      >
+                        <option value="">— Inherit support roles —</option>
+                        {roles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                ))}
+                {cats.length < 25 && (
+                  <button
+                    className="btn-secondary text-xs w-full mt-1"
+                    onClick={() => set("categories", [...cats, { name: "", emoji: "🎫", description: "", roleId: "" }])}
+                  >
+                    + Add Category
+                  </button>
+                )}
+                {cats.length === 0 && (
+                  <p className="text-xs text-gray-600 text-center py-2">No categories yet. Add at least one category to send a ticket panel.</p>
+                )}
+              </div>
+
+              <SectionHeader title="Send Panel" />
+              <TicketPanelSender guildId={guildId} channels={channels} />
             </>
           );
         })()}
@@ -779,18 +967,33 @@ export default function ModulePanel({ moduleId, guildId, isPremium, isOwner, set
             {saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
             {saving ? "Saving…" : ownerGated ? "Owner Only" : "Save Changes"}
           </button>
-          {saved && (
-            <span className="flex items-center gap-1.5 text-green-400 text-sm font-medium">
-              <CheckCircle size={15} /> Saved
-            </span>
-          )}
-          {err && (
-            <span className="flex items-center gap-1.5 text-red-400 text-sm">
-              <AlertTriangle size={15} /> {err}
-            </span>
-          )}
         </div>
       )}
+
+      {/* ── Toast notification (bottom-right, always visible) ── */}
+      {(saved || err) && (
+        <div
+          className="fixed bottom-6 right-6 z-50 flex items-center gap-3 px-5 py-4 rounded-2xl shadow-2xl text-sm font-semibold"
+          style={{
+            background: saved ? "linear-gradient(135deg,#14532d,#166534)" : "linear-gradient(135deg,#7f1d1d,#991b1b)",
+            border:     saved ? "1px solid #22c55e" : "1px solid #ef4444",
+            boxShadow:  saved ? "0 8px 32px rgba(34,197,94,0.35)" : "0 8px 32px rgba(239,68,68,0.35)",
+            minWidth: "280px",
+            animation: "toastSlideUp 0.35s cubic-bezier(0.34,1.56,0.64,1) forwards",
+          }}
+        >
+          {saved
+            ? <><CheckCircle size={20} className="text-green-400 flex-shrink-0" /><div><p className="text-green-100 font-semibold">Saved successfully!</p><p className="text-green-400 text-xs font-normal mt-0.5">Your changes are live.</p></div></>
+            : <><AlertTriangle size={20} className="text-red-400 flex-shrink-0" /><div><p className="text-red-100 font-semibold">Save failed</p><p className="text-red-400 text-xs font-normal mt-0.5">{err}</p></div></>
+          }
+        </div>
+      )}
+      <style>{`
+        @keyframes toastSlideUp {
+          from { opacity: 0; transform: translateY(24px) scale(0.95); }
+          to   { opacity: 1; transform: translateY(0)    scale(1); }
+        }
+      `}</style>
     </div>
   );
 }
