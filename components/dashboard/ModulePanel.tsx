@@ -1503,7 +1503,7 @@ export default function ModulePanel({ moduleId, guildId, isPremium, isOwner, set
             <div className="section-row">
               <p className="text-sm font-medium text-white mb-1">Panel Color</p>
               <div className="flex gap-2">
-                <input type="color" value={`#${(tk.panelColor || "0a0a0a").replace("#", "")}`}
+                <input type="color" value={`#${String(tk.panelColor || "0a0a0a").replace("#", "")}`}
                   onChange={(e) => set("panelColor", e.target.value.replace("#", ""))}
                   className="w-10 h-9 rounded cursor-pointer border border-[#2a2a2a] bg-transparent" />
                 <input type="text" value={String(tk.panelColor || "")} onChange={(e) => set("panelColor", e.target.value.replace("#", ""))}
