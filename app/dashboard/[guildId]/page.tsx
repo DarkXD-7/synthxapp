@@ -1,3 +1,5 @@
+// app/dashboard/[guildId]/page.tsx — Updated with ignore module, utility removed
+
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
@@ -16,7 +18,7 @@ export type ModuleId =
   | "overview" | "antinuke" | "automod" | "logging" | "welcome"
   | "leveling" | "giveaway" | "reactionroles" | "autorole" | "nightmode"
   | "emergency" | "botprofile" | "moderation" | "setup" | "tickets"
-  | "embeds" | "minecraft" | "utility";
+  | "embeds" | "minecraft" | "ignore";
 
 interface GuildInfo {
   id: string;
@@ -134,56 +136,41 @@ export default function GuildDashboard() {
         guildIcon={guildInfo?.icon}
       />
 
-      {/* Main content */}
       <div className="flex-1 md:ml-60 min-h-screen flex flex-col">
         {/* Topbar */}
         <div className="sticky top-0 z-20 bg-[#080808]/95 backdrop-blur border-b border-[#1e1e1e] px-5 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3 ml-10 md:ml-0">
-            <div className="flex items-center gap-2">
-              {guildInfo?.icon ? (
-                <img
-                  src={`https://cdn.discordapp.com/icons/${guildId}/${guildInfo.icon}.png?size=32`}
-                  alt={guildInfo.name}
-                  className="w-6 h-6 rounded-md object-cover"
-                />
-              ) : null}
-              <span className="font-semibold text-sm text-white truncate max-w-[150px] sm:max-w-none">
-                {guildInfo?.name || `Server ${guildId}`}
-              </span>
-            </div>
+            {guildInfo?.icon ? (
+              <img src={`https://cdn.discordapp.com/icons/${guildId}/${guildInfo.icon}.png?size=32`}
+                alt={guildInfo.name} className="w-6 h-6 rounded-md object-cover" />
+            ) : null}
+            <span className="font-semibold text-sm text-white truncate max-w-[150px] sm:max-w-none">
+              {guildInfo?.name || `Server ${guildId}`}
+            </span>
             {isPremium && <span className="pill pill-purple hidden sm:inline-flex">Premium</span>}
             {isOwner && <span className="pill pill-orange hidden sm:inline-flex">Owner</span>}
           </div>
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1.5">
-              {botOnline ? (
-                <Wifi size={13} className="text-green-400" />
-              ) : (
-                <WifiOff size={13} className="text-red-400" />
-              )}
+              {botOnline ? <Wifi size={13} className="text-green-400" /> : <WifiOff size={13} className="text-red-400" />}
               <span className={`text-xs hidden sm:inline ${botOnline ? "text-green-400" : "text-red-400"}`}>
                 {botOnline ? "Online" : "Offline"}
               </span>
             </div>
-            <button
-              onClick={loadSettings}
-              className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-white px-2.5 py-1.5 rounded-lg hover:bg-white/5 transition-colors"
-            >
-              <RefreshCw size={12} />
-              <span className="hidden sm:inline">Refresh</span>
+            <button onClick={loadSettings}
+              className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-white px-2.5 py-1.5 rounded-lg hover:bg-white/5 transition-colors">
+              <RefreshCw size={12} /><span className="hidden sm:inline">Refresh</span>
             </button>
           </div>
         </div>
 
-        {/* Bot offline warning */}
         {!botOnline && (
           <div className="mx-5 mt-4 info-banner info-yellow flex items-center gap-2">
             <AlertTriangle size={14} className="flex-shrink-0" />
-            <span>Bot API unreachable. Settings shown may be outdated.</span>
+            <span>Bot API unreachable — settings shown may be stale. The bot will sync when it comes back online.</span>
           </div>
         )}
 
-        {/* Panel */}
         <div className="flex-1 p-5 md:p-6 animate-fade-in">
           {activeModule === "overview" && (
             <OverviewPanel guildId={guildId} isPremium={isPremium} isOwner={isOwner} settings={settings} onRefresh={loadSettings} />
