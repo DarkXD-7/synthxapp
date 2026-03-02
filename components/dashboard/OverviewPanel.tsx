@@ -45,7 +45,7 @@ export default function OverviewPanel({ guildId, isPremium, isOwner, settings, o
           <h1 className="text-2xl font-bold text-white mb-1">Overview</h1>
           <p className="text-sm text-gray-500">
             Server ID: <code>{guildId}</code>
-            {guildData?.ownerId && isOwner && <span className="ml-2 text-orange-400 text-xs">(You are the owner)</span>}
+            {!!guildData?.ownerId && isOwner && <span className="ml-2 text-orange-400 text-xs">(You are the owner)</span>}
           </p>
         </div>
         <div className="flex items-center gap-2">
