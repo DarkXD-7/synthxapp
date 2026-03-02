@@ -350,6 +350,818 @@ function DiscordEmbedPreview({ embed }: { embed: Record<string, string> }) {
   );
 }
 
+// ─── Extracted Module Sub-Components (fixes Rules of Hooks) ─────────────────
+
+function AntinukePanel({ local, set, readOnly, guildId }: {
+  local: Record<string, unknown>; set: (k: string, v: unknown) => void;
+  readOnly: boolean; guildId: string;
+}) {
+  const an = local;
+  const whitelist: string[] = (an.whitelist as string[]) || [];
+  const [newWlId, setNewWlId] = useState("");
+  const [wlStatus, setWlStatus] = useState<string | null>(null);
+  const [extraOwnerInput, setExtraOwnerInput] = useState(String(an.extraOwner || ""));
+  const [eoStatus, setEoStatus] = useState<string | null>(null);
+
+  const addToWhitelist = async () => {
+    if (!newWlId.trim()) return;
+    const updated = [...whitelist, newWlId.trim()];
+    set("whitelist", updated);
+    setNewWlId("");
+    setWlStatus("Added. Save changes to apply.");
+  };
+
+  const removeFromWhitelist = (uid: string) => {
+    set("whitelist", whitelist.filter((x) => x !== uid));
+    setWlStatus("Removed. Save changes to apply.");
+  };
+
+  const setExtraOwner = () => {
+    set("extraOwner", extraOwnerInput.trim() || null);
+    setEoStatus("Extra owner set. Save to apply.");
+  };
+
+  const modules = [
+    { key: "antiban",      label: "Anti Ban",            desc: "Prevent mass bans" },
+    { key: "antikick",     label: "Anti Kick",           desc: "Prevent mass kicks" },
+    { key: "antibotadd",   label: "Anti Bot Add",        desc: "Prevent adding bots" },
+    { key: "antichcr",     label: "Anti Channel Create", desc: "Prevent mass channel creation" },
+    { key: "antichdl",     label: "Anti Channel Delete", desc: "Prevent mass channel deletion" },
+    { key: "antieveryone", label: "Anti Everyone Ping",  desc: "Block @everyone pings" },
+    { key: "antirlcr",     label: "Anti Role Create",    desc: "Prevent mass role creation" },
+    { key: "antirldl",     label: "Anti Role Delete",    desc: "Prevent mass role deletion" },
+    { key: "antiwebhookcr",label: "Anti Webhook Create", desc: "Block webhook creation" },
+    { key: "antiwebhookdl",label: "Anti Webhook Delete", desc: "Block webhook deletion" },
+    { key: "antiprune",    label: "Anti Prune",          desc: "Prevent member pruning" },
+  ];
+
+  return (
+    <>
+      <Banner color="red">Anti-Nuke protects your server from raids and nukes. Only the server owner and extra owner can modify these settings.</Banner>
+
+      <SectionHeader title="Main Toggle" />
+      <RowToggle label="Enable Anti-Nuke" desc="Activate server protection"
+        checked={Boolean(an.enabled)} onChange={(v) => set("enabled", v)} disabled={readOnly} />
+
+      <SectionHeader title="Punishment" />
+      <RowDropdown label="Default Punishment" desc="Action taken against violators"
+        options={[
+          { value: "ban",      label: "Ban" },
+          { value: "kick",     label: "Kick" },
+          { value: "temprole", label: "Temp Role" },
+        ]}
+        value={String(an.punishment || "ban")} onChange={(v) => set("punishment", v)} disabled={readOnly} />
+
+      <SectionHeader title="Protection Modules" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        {modules.map(({ key, label, desc }) => (
+          <div key={key} className="flex items-center justify-between p-3 rounded-xl bg-[#0a0a0a] border border-[#1e1e1e]">
+            <div>
+              <p className="text-sm font-medium text-white">{label}</p>
+              <p className="text-xs text-gray-600">{desc}</p>
+            </div>
+            <label className={`toggle flex-shrink-0 ${readOnly ? "opacity-40 pointer-events-none" : ""}`}>
+              <input type="checkbox" checked={Boolean(an[key as keyof typeof an] !== false)}
+                onChange={(e) => set(key, e.target.checked)} />
+              <div className="toggle-track"><div className="toggle-thumb" /></div>
+            </label>
+          </div>
+        ))}
+      </div>
+
+      <SectionHeader title="Extra Owner" />
+      <div className="section-row space-y-2">
+        <p className="text-sm font-medium text-white">Extra Owner</p>
+        <p className="text-xs text-gray-500">This user gets the same Anti-Nuke access as the server owner.</p>
+        {an.extraOwner && (
+          <div className="flex items-center gap-2 text-xs bg-orange-500/10 border border-orange-500/20 text-orange-300 px-3 py-2 rounded-lg">
+            <Crown size={12} />
+            Current Extra Owner: <code>{String(an.extraOwner)}</code>
+            {!readOnly && (
+              <button onClick={() => { set("extraOwner", null); setEoStatus("Removed. Save to apply."); }}
+                className="ml-auto text-orange-500 hover:text-red-400"><X size={12} /></button>
+            )}
+          </div>
+        )}
+        {!readOnly && (
+          <div className="flex gap-2">
+            <input type="text" value={extraOwnerInput} onChange={(e) => setExtraOwnerInput(e.target.value)}
+              placeholder="User ID or username" className="input flex-1 text-sm" />
+            <button onClick={setExtraOwner} className="btn-secondary text-xs px-3">Set</button>
+          </div>
+        )}
+        {eoStatus && <p className="text-xs text-green-400">{eoStatus}</p>}
+      </div>
+
+      <SectionHeader title="Whitelist" />
+      <div className="section-row space-y-2">
+        <p className="text-sm font-medium text-white">Whitelisted Users</p>
+        <p className="text-xs text-gray-500">These users are exempt from Anti-Nuke protection.</p>
+        <div className="flex flex-wrap gap-1.5 min-h-[30px]">
+          {whitelist.length === 0 && <span className="text-xs text-gray-600 italic">No whitelisted users</span>}
+          {whitelist.map((uid) => (
+            <span key={uid} className="flex items-center gap-1 text-xs bg-[#1c1c1c] text-gray-300 px-2 py-1 rounded-full border border-[#2a2a2a]">
+              {uid}
+              {!readOnly && (
+                <button onClick={() => removeFromWhitelist(uid)} className="text-gray-500 hover:text-red-400 transition-colors">
+                  <X size={10} />
+                </button>
+              )}
+            </span>
+          ))}
+        </div>
+        {!readOnly && (
+          <div className="flex gap-2">
+            <input type="text" value={newWlId} onChange={(e) => setNewWlId(e.target.value)}
+              placeholder="User ID or username" className="input flex-1 text-sm"
+              onKeyDown={(e) => e.key === "Enter" && addToWhitelist()} />
+            <button onClick={addToWhitelist} className="btn-secondary text-xs px-3">
+              <Plus size={12} />
+            </button>
+          </div>
+        )}
+        {wlStatus && <p className="text-xs text-green-400">{wlStatus}</p>}
+      </div>
+    </>
+  );
+}
+
+function AutomodPanel({ local, set, channels, roles }: {
+  local: Record<string, unknown>; set: (k: string, v: unknown) => void;
+  channels: Channel[]; roles: Role[];
+}) {
+  const am = local;
+  const activeEvents: string[] = (am.activeEvents as string[]) || [];
+  const ignoredUsers: string[] = (am.ignoredUsers as string[]) || [];
+  const ignoredChannels: string[] = (am.ignoredChannels as string[]) || [];
+  const [newIgnoreUser, setNewIgnoreUser] = useState("");
+  const [newIgnoreCh, setNewIgnoreCh] = useState("");
+  const punishMap: Record<string, string> = (am.punishments as Record<string, string>) || {};
+
+  const toggleEvent = (event: string) => {
+    if (activeEvents.includes(event)) set("activeEvents", activeEvents.filter((e) => e !== event));
+    else set("activeEvents", [...activeEvents, event]);
+  };
+
+  const setPunishment = (event: string, punishment: string) => {
+    set("punishments", { ...punishMap, [event]: punishment });
+  };
+
+  return (
+    <>
+      <SectionHeader title="Main Toggle" />
+      <RowToggle label="Enable AutoMod" desc="Automatically moderate messages"
+        checked={Boolean(am.enabled)} onChange={(v) => set("enabled", v)} />
+
+      <SectionHeader title="Log Channel" />
+      <RowSelect label="AutoMod Log Channel" desc="Where AutoMod actions are logged"
+        channels={channels} value={String(am.logChannel || "")} onChange={(v) => set("logChannel", v)} />
+
+      <SectionHeader title="Filters" />
+      <div className="space-y-2">
+        {AUTOMOD_EVENTS.map(({ key, label, desc }) => {
+          const isActive = activeEvents.includes(key);
+          return (
+            <div key={key} className={`p-3 rounded-xl border transition-colors ${isActive ? "bg-orange-500/5 border-orange-500/20" : "bg-[#0a0a0a] border-[#1e1e1e]"}`}>
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <p className="text-sm font-medium text-white">{label}</p>
+                  <p className="text-xs text-gray-500">{desc}</p>
+                </div>
+                <label className="toggle flex-shrink-0">
+                  <input type="checkbox" checked={isActive} onChange={() => toggleEvent(key)} />
+                  <div className="toggle-track"><div className="toggle-thumb" /></div>
+                </label>
+              </div>
+              {isActive && (
+                <select
+                  value={punishMap[key] || "mute"}
+                  onChange={(e) => setPunishment(key, e.target.value)}
+                  className="input text-xs w-36"
+                >
+                  <option value="delete">Delete only</option>
+                  <option value="mute">Mute</option>
+                  <option value="kick">Kick</option>
+                  <option value="ban">Ban</option>
+                  <option value="warn">Warn</option>
+                </select>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      <SectionHeader title="Ignored Users" />
+      <div className="section-row space-y-2">
+        <p className="text-xs text-gray-500">These users are exempt from AutoMod.</p>
+        <div className="flex flex-wrap gap-1.5 min-h-[24px]">
+          {ignoredUsers.length === 0 && <span className="text-xs text-gray-600 italic">None</span>}
+          {ignoredUsers.map((uid) => (
+            <span key={uid} className="flex items-center gap-1 text-xs bg-[#1c1c1c] text-gray-300 px-2 py-1 rounded-full border border-[#2a2a2a]">
+              {uid}
+              <button onClick={() => set("ignoredUsers", ignoredUsers.filter((x) => x !== uid))}
+                className="text-gray-500 hover:text-red-400"><X size={10} /></button>
+            </span>
+          ))}
+        </div>
+        <div className="flex gap-2">
+          <input type="text" value={newIgnoreUser} onChange={(e) => setNewIgnoreUser(e.target.value)}
+            placeholder="User ID" className="input flex-1 text-sm"
+            onKeyDown={(e) => { if (e.key === "Enter" && newIgnoreUser.trim()) { set("ignoredUsers", [...ignoredUsers, newIgnoreUser.trim()]); setNewIgnoreUser(""); } }} />
+          <button onClick={() => { if (newIgnoreUser.trim()) { set("ignoredUsers", [...ignoredUsers, newIgnoreUser.trim()]); setNewIgnoreUser(""); } }}
+            className="btn-secondary text-xs px-3"><Plus size={12} /></button>
+        </div>
+      </div>
+
+      <SectionHeader title="Ignored Channels" />
+      <div className="section-row space-y-2">
+        <p className="text-xs text-gray-500">AutoMod won{"'"}t act in these channels.</p>
+        <div className="flex flex-wrap gap-1.5 min-h-[24px]">
+          {ignoredChannels.length === 0 && <span className="text-xs text-gray-600 italic">None</span>}
+          {ignoredChannels.map((cid) => {
+            const ch = channels.find((c) => c.id === cid);
+            return (
+              <span key={cid} className="flex items-center gap-1 text-xs bg-[#1c1c1c] text-gray-300 px-2 py-1 rounded-full border border-[#2a2a2a]">
+                {ch ? ch.name : cid}
+                <button onClick={() => set("ignoredChannels", ignoredChannels.filter((x) => x !== cid))}
+                  className="text-gray-500 hover:text-red-400"><X size={10} /></button>
+              </span>
+            );
+          })}
+        </div>
+        <select defaultValue="" onChange={(e) => {
+          if (e.target.value && !ignoredChannels.includes(e.target.value)) {
+            set("ignoredChannels", [...ignoredChannels, e.target.value]);
+            e.target.value = "";
+          }
+        }} className="input">
+          <option value="">— Add Channel —</option>
+          {channels.filter((c) => !ignoredChannels.includes(c.id)).map((c) => (
+            <option key={c.id} value={c.id}>{c.name}</option>
+          ))}
+        </select>
+      </div>
+
+      <SectionHeader title="Bypass Role" />
+      <RowRoleSelect label="AutoMod Bypass Role" desc="Members with this role ignore AutoMod"
+        roles={roles} value={String(am.bypassRole || "")} onChange={(v) => set("bypassRole", v)} />
+    </>
+  );
+}
+
+function WelcomePanel({ local, set, setLocal, channels, guildId }: {
+  local: Record<string, unknown>; set: (k: string, v: unknown) => void;
+  setLocal: React.Dispatch<React.SetStateAction<Record<string, unknown>>>;
+  channels: Channel[]; guildId: string;
+}) {
+  const wc = local;
+  const [testSending, setTestSending] = useState(false);
+  const [testResult, setTestResult] = useState<string | null>(null);
+
+  const sendTest = async () => {
+    if (!wc.channelId) { setTestResult("Please select a channel first."); return; }
+    setTestSending(true);
+    setTestResult(null);
+    try {
+      const res = await fetch(`/api/settings/${guildId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ module: "welcome_test", settings: { channelId: wc.channelId } }),
+      });
+      const data = await res.json();
+      setTestResult(data.success ? "Test message sent!" : (data.error || "Failed"));
+    } catch { setTestResult("Error sending test."); }
+    finally { setTestSending(false); setTimeout(() => setTestResult(null), 5000); }
+  };
+
+  const resetWelcome = () => {
+    setLocal({
+      enabled: false, welcomeType: "embed", channelId: null,
+      embed: { title: "Welcome to {server_name}! 🎉", description: "Hey {user_mention}, welcome to **{server_name}**!\nYou are member **#{server_membercount}**.", color: "ef4444", authorName: "", authorIcon: "", footerText: "", footerIcon: "", thumbnail: "", image: "" },
+      boosterEnabled: false, boostChannelId: null,
+      boostMessage: "🎉 {user_mention} just boosted {server_name}! We now have {boost_count} boosts!",
+    });
+  };
+
+  const embed = (wc.embed as Record<string, string>) || {};
+  const setEmbed = (k: string, v: string) => set("embed", { ...embed, [k]: v });
+
+  const toBase64 = (file: File): Promise<string> =>
+    new Promise((res, rej) => {
+      const reader = new FileReader();
+      reader.onload = () => res((reader.result as string).split(",")[1]);
+      reader.onerror = rej;
+      reader.readAsDataURL(file);
+    });
+
+  return (
+    <>
+      <SectionHeader title="Welcome Messages" />
+      <RowToggle label="Enable Welcome Messages" desc="Send a message when a new member joins"
+        checked={Boolean(wc.enabled)} onChange={(v) => set("enabled", v)} />
+      <RowSelect label="Welcome Channel" desc="Where welcome messages are sent"
+        channels={channels} value={String(wc.channelId || "")} onChange={(v) => set("channelId", v)}
+        placeholder="— Select Channel —" />
+
+      {wc.enabled && (
+        <>
+          <SectionHeader title="Embed Configuration" />
+          <div className="p-4 rounded-xl bg-[#0a0a0a] border border-[#1e1e1e] space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <p className="text-xs text-gray-500 mb-1">Embed Color</p>
+                <div className="flex gap-2">
+                  <input type="color" value={`#${embed.color || "ef4444"}`}
+                    onChange={(e) => setEmbed("color", e.target.value.replace("#", ""))}
+                    className="w-10 h-9 rounded cursor-pointer border border-[#2a2a2a] bg-transparent" />
+                  <input type="text" value={embed.color || "ef4444"} onChange={(e) => setEmbed("color", e.target.value.replace("#", ""))}
+                    placeholder="ef4444" className="input flex-1 font-mono text-sm" />
+                </div>
+              </div>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 mb-1">Author Name</p>
+              <input type="text" value={embed.authorName || ""} onChange={(e) => setEmbed("authorName", e.target.value)}
+                placeholder="Author name (optional)" className="input text-sm" />
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 mb-1">Author Icon URL</p>
+              <input type="text" value={embed.authorIcon || ""} onChange={(e) => setEmbed("authorIcon", e.target.value)}
+                placeholder="https://..." className="input text-sm" />
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 mb-1">Embed Title</p>
+              <input type="text" value={embed.title || ""} onChange={(e) => setEmbed("title", e.target.value)}
+                placeholder="Welcome to {server_name}! 🎉" className="input text-sm" />
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 mb-1">Description</p>
+              <p className="text-[10px] text-gray-600 mb-1">Variables: {"{user_mention} {user_name} {server_name} {server_membercount}"}</p>
+              <textarea value={embed.description || ""} onChange={(e) => setEmbed("description", e.target.value)}
+                rows={3} placeholder="Welcome message..." className="input" style={{ resize: "vertical" }} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <p className="text-xs text-gray-500 mb-1">Thumbnail URL</p>
+                <input type="text" value={embed.thumbnail || ""} onChange={(e) => setEmbed("thumbnail", e.target.value)}
+                  placeholder="Use {user_avatar} or URL" className="input text-sm" />
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 mb-1">Image URL</p>
+                <input type="text" value={embed.image || ""} onChange={(e) => setEmbed("image", e.target.value)}
+                  placeholder="Banner image URL" className="input text-sm" />
+              </div>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 mb-1">Footer Text</p>
+              <input type="text" value={embed.footerText || ""} onChange={(e) => setEmbed("footerText", e.target.value)}
+                placeholder="Footer text..." className="input text-sm" />
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 mb-1">Footer Icon URL</p>
+              <input type="text" value={embed.footerIcon || ""} onChange={(e) => setEmbed("footerIcon", e.target.value)}
+                placeholder="https://..." className="input text-sm" />
+            </div>
+            <UploadField label="Upload Thumbnail" accept="image/*"
+              preview={wc.thumbnailPreview as string}
+              onFile={async (f) => {
+                set("thumbnailPreview", URL.createObjectURL(f));
+                set("thumbnailBase64", await toBase64(f));
+                setEmbed("thumbnail", "__uploaded__");
+              }} />
+            <UploadField label="Upload Banner Image" accept="image/*"
+              preview={wc.bannerPreview as string}
+              onFile={async (f) => {
+                set("bannerPreview", URL.createObjectURL(f));
+                set("bannerBase64", await toBase64(f));
+                setEmbed("image", "__uploaded__");
+              }} />
+          </div>
+
+          <div className="mt-3">
+            <p className="text-xs text-gray-500 mb-2">Preview</p>
+            <DiscordEmbedPreview embed={{
+              color: embed.color, authorName: embed.authorName, authorIcon: embed.authorIcon,
+              title: (embed.title || "").replace("{server_name}", "Your Server"),
+              description: (embed.description || "").replace("{user_mention}", "@NewMember").replace("{user_name}", "NewMember").replace("{server_name}", "Your Server").replace("{server_membercount}", "1234"),
+              thumbnail: embed.thumbnail?.startsWith("__") ? undefined : embed.thumbnail,
+              image: embed.image?.startsWith("__") ? wc.bannerPreview as string : embed.image,
+              footerText: embed.footerText, footerIcon: embed.footerIcon,
+            }} />
+          </div>
+
+          <div className="flex gap-2 mt-3">
+            <button onClick={sendTest} disabled={testSending || !wc.channelId}
+              className="btn-secondary text-xs flex items-center gap-1.5">
+              {testSending ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
+              Send Test
+            </button>
+            <button onClick={resetWelcome} className="btn-secondary text-xs text-red-400 hover:text-red-300 flex items-center gap-1.5">
+              <RefreshCw size={12} /> Reset
+            </button>
+          </div>
+          {testResult && <p className="text-xs text-green-400 mt-1">{testResult}</p>}
+        </>
+      )}
+
+      <SectionHeader title="Booster Messages" />
+      <RowToggle label="Enable Booster Messages" desc="Send a message when someone boosts the server"
+        checked={Boolean(wc.boosterEnabled)} onChange={(v) => set("boosterEnabled", v)} />
+      {wc.boosterEnabled && (
+        <>
+          <RowSelect label="Boost Channel" channels={channels} value={String(wc.boostChannelId || "")}
+            onChange={(v) => set("boostChannelId", v)} placeholder="— Select Channel —" />
+          <RowTextarea label="Boost Message" desc="Variables: {user_mention} {server_name} {boost_count}"
+            value={String(wc.boostMessage || "")} onChange={(v) => set("boostMessage", v)}
+            placeholder="🎉 {user_mention} just boosted {server_name}!" />
+        </>
+      )}
+    </>
+  );
+}
+
+function GiveawayPanel({ channels, guildId, settings }: {
+  channels: Channel[]; guildId: string; settings: Record<string, unknown>;
+}) {
+  const [newGw, setNewGw] = useState({ prize: "", winners: "1", duration: "1h", channelId: "" });
+  const [creating, setCreating] = useState(false);
+  const [createResult, setCreateResult] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [endingId, setEndingId] = useState<string | null>(null);
+  const [confirmEnd, setConfirmEnd] = useState<string | null>(null);
+  const giveaways = (settings.giveaways as Record<string, unknown>[]) || [];
+
+  const createGiveaway = async () => {
+    if (!newGw.prize || !newGw.channelId) return;
+    setCreating(true);
+    try {
+      const res = await fetch(`/api/settings/${guildId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ module: "giveaway_create", settings: newGw }),
+      });
+      const data = await res.json();
+      setCreateResult({ type: data.success ? "success" : "error", text: data.message || data.error || "Done" });
+      if (data.success) setNewGw({ prize: "", winners: "1", duration: "1h", channelId: "" });
+    } catch { setCreateResult({ type: "error", text: "Network error" }); }
+    finally { setCreating(false); setTimeout(() => setCreateResult(null), 5000); }
+  };
+
+  const endGiveaway = async (messageId: string) => {
+    setEndingId(messageId);
+    try {
+      await fetch(`/api/settings/${guildId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ module: "giveaway_end", settings: { messageId } }),
+      });
+    } catch {}
+    finally { setEndingId(null); setConfirmEnd(null); }
+  };
+
+  return (
+    <>
+      <SectionHeader title="Start New Giveaway" />
+      <div className="p-4 rounded-xl bg-[#0a0a0a] border border-[#1e1e1e] space-y-3">
+        <RowInput label="Prize" value={newGw.prize} onChange={(v) => setNewGw((p) => ({ ...p, prize: v }))}
+          placeholder="e.g. Nitro Classic, Discord Server Boost" />
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <p className="text-xs text-gray-500 mb-1">Winners</p>
+            <input type="number" min="1" max="20" value={newGw.winners}
+              onChange={(e) => setNewGw((p) => ({ ...p, winners: e.target.value }))} className="input" />
+          </div>
+          <div>
+            <p className="text-xs text-gray-500 mb-1">Duration</p>
+            <select value={newGw.duration} onChange={(e) => setNewGw((p) => ({ ...p, duration: e.target.value }))} className="input">
+              <option value="30m">30 Minutes</option>
+              <option value="1h">1 Hour</option>
+              <option value="6h">6 Hours</option>
+              <option value="12h">12 Hours</option>
+              <option value="1d">1 Day</option>
+              <option value="3d">3 Days</option>
+              <option value="7d">7 Days</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <p className="text-xs text-gray-500 mb-1">Channel</p>
+          <select value={newGw.channelId} onChange={(e) => setNewGw((p) => ({ ...p, channelId: e.target.value }))} className="input">
+            <option value="">— Select Channel —</option>
+            {channels.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+        </div>
+        <button onClick={createGiveaway} disabled={creating || !newGw.prize || !newGw.channelId}
+          className="btn-primary w-full flex items-center justify-center gap-2">
+          {creating ? <Loader2 size={14} className="animate-spin" /> : <Gift size={14} />}
+          {creating ? "Starting…" : "Start Giveaway"}
+        </button>
+        {createResult && (
+          <p className={`text-xs ${createResult.type === "success" ? "text-green-400" : "text-red-400"}`}>{createResult.text}</p>
+        )}
+      </div>
+
+      <SectionHeader title="Active Giveaways" />
+      {giveaways.length === 0 ? (
+        <div className="text-center py-8 text-gray-600">
+          <Gift size={28} className="mx-auto mb-3 opacity-30" />
+          <p className="text-sm">No active giveaways.</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {giveaways.map((gw, i) => (
+            <div key={i} className="p-4 rounded-xl bg-[#0a0a0a] border border-[#1e1e1e]">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-semibold text-white text-sm">{String(gw.prize)}</p>
+                  <p className="text-xs text-gray-500">
+                    {String(gw.winners)} winner(s) • Ends: {new Date(Number(gw.endsAt) * 1000).toLocaleString()}
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  {confirmEnd === String(gw.messageId) ? (
+                    <>
+                      <button onClick={() => endGiveaway(String(gw.messageId))} disabled={endingId === String(gw.messageId)}
+                        className="text-xs px-3 py-1.5 rounded-lg bg-red-500/20 border border-red-500/40 text-red-300 hover:bg-red-500/30">
+                        {endingId === String(gw.messageId) ? "Ending…" : "Confirm End"}
+                      </button>
+                      <button onClick={() => setConfirmEnd(null)} className="text-xs px-2 py-1.5 rounded-lg border border-[#2a2a2a] text-gray-500">
+                        Cancel
+                      </button>
+                    </>
+                  ) : (
+                    <button onClick={() => setConfirmEnd(String(gw.messageId))}
+                      className="text-xs px-3 py-1.5 rounded-lg bg-[#1a1a1a] border border-[#2a2a2a] text-gray-400 hover:text-red-400 hover:border-red-500/30">
+                      End Giveaway
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </>
+  );
+}
+
+function ReactionRolesPanel({ local, set, roles, guildId }: {
+  local: Record<string, unknown>; set: (k: string, v: unknown) => void;
+  roles: Role[]; guildId: string;
+}) {
+  const rr = local;
+  const [messageId, setMessageId] = useState(String(rr.activeMessageId || ""));
+  const [loading, setLoading] = useState(false);
+  const [rrConfig, setRrConfig] = useState<{ emoji: string; roleId: string }[]>([]);
+  const [rrStatus, setRrStatus] = useState<string | null>(null);
+
+  const loadPanel = async () => {
+    if (!messageId.trim()) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/settings/${guildId}?reactionroles_msg=${messageId}`);
+      const data = await res.json();
+      if (data.reactionroles_panel) {
+        setRrConfig(data.reactionroles_panel.mappings || []);
+        setRrStatus("Panel loaded.");
+      } else {
+        setRrStatus("No reaction role panel found for that message ID.");
+      }
+    } catch { setRrStatus("Error loading panel."); }
+    finally { setLoading(false); setTimeout(() => setRrStatus(null), 4000); }
+  };
+
+  const addMapping = () => setRrConfig((prev) => [...prev, { emoji: "", roleId: "" }]);
+  const removeMapping = (i: number) => setRrConfig((prev) => prev.filter((_, j) => j !== i));
+  const updateMapping = (i: number, k: "emoji" | "roleId", v: string) =>
+    setRrConfig((prev) => prev.map((m, j) => j === i ? { ...m, [k]: v } : m));
+
+  return (
+    <>
+      <SectionHeader title="Load Existing Panel" />
+      <div className="section-row space-y-2">
+        <p className="text-xs text-gray-500">Enter the message ID of an existing reaction role panel to edit it.</p>
+        <div className="flex gap-2">
+          <input type="text" value={messageId} onChange={(e) => setMessageId(e.target.value)}
+            placeholder="Message ID" className="input flex-1 text-sm font-mono" />
+          <button onClick={loadPanel} disabled={loading || !messageId.trim()}
+            className="btn-secondary text-xs px-3 flex items-center gap-1.5">
+            {loading ? <Loader2 size={12} className="animate-spin" /> : <Eye size={12} />} Load
+          </button>
+        </div>
+        {rrStatus && <p className="text-xs text-green-400">{rrStatus}</p>}
+      </div>
+
+      <SectionHeader title="Reaction Role Mappings" />
+      <div className="space-y-2">
+        {rrConfig.map((m, i) => (
+          <div key={i} className="flex items-center gap-2 p-3 rounded-xl bg-[#0a0a0a] border border-[#1e1e1e]">
+            <input type="text" value={m.emoji} onChange={(e) => updateMapping(i, "emoji", e.target.value)}
+              placeholder="Emoji" className="input w-20 text-center text-lg" />
+            <select value={m.roleId} onChange={(e) => updateMapping(i, "roleId", e.target.value)} className="input flex-1">
+              <option value="">— Select Role —</option>
+              {roles.map((r) => <option key={r.id} value={r.id}>@{r.name}</option>)}
+            </select>
+            <button onClick={() => removeMapping(i)} className="text-gray-600 hover:text-red-400 transition-colors p-1.5 rounded-lg hover:bg-red-500/10">
+              <Trash2 size={14} />
+            </button>
+          </div>
+        ))}
+        {rrConfig.length === 0 && (
+          <p className="text-xs text-gray-600 text-center py-3">No mappings yet. Add emoji → role pairs below.</p>
+        )}
+        <button onClick={addMapping} className="btn-secondary text-xs w-full flex items-center justify-center gap-1.5">
+          <Plus size={12} /> Add Emoji → Role
+        </button>
+      </div>
+
+      <div className="mt-4">
+        <p className="text-xs text-gray-500 mb-2">When ready, save changes and the bot will update the reaction role panel.</p>
+        <input type="hidden" value={JSON.stringify(rrConfig)} onChange={() => {}} />
+      </div>
+    </>
+  );
+}
+
+function EmbedsPanel({ channels, guildId }: { channels: Channel[]; guildId: string }) {
+  const [embed, setEmbed] = useState<Record<string, string>>({
+    title: "", description: "", color: "ef4444",
+    authorName: "", authorIcon: "", footerText: "", footerIcon: "",
+    thumbnail: "", image: "",
+  });
+  const [channelId, setChannelId] = useState("");
+  const [editMessageId, setEditMessageId] = useState("");
+  const [sending, setSending] = useState(false);
+  const [loadingEdit, setLoadingEdit] = useState(false);
+  const [result, setResult] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const setE = (k: string, v: string) => setEmbed((p) => ({ ...p, [k]: v }));
+
+  const loadExisting = async () => {
+    if (!editMessageId.trim()) return;
+    setLoadingEdit(true);
+    try {
+      const res = await fetch(`/api/settings/${guildId}?embed_msg=${editMessageId}`);
+      const data = await res.json();
+      if (data.embed) setEmbed(data.embed);
+      else setResult({ type: "error", text: "Could not find embed. Make sure the bot sent it." });
+    } catch { setResult({ type: "error", text: "Error loading embed." }); }
+    finally { setLoadingEdit(false); setTimeout(() => setResult(null), 4000); }
+  };
+
+  const sendEmbed = async () => {
+    if (!channelId) { setResult({ type: "error", text: "Select a channel." }); return; }
+    setSending(true);
+    try {
+      const res = await fetch(`/api/settings/${guildId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ module: "embed_send", settings: { embed, channelId, editMessageId: editMessageId || undefined } }),
+      });
+      const data = await res.json();
+      setResult({ type: data.success ? "success" : "error", text: data.message || data.error || "Done" });
+    } catch { setResult({ type: "error", text: "Network error." }); }
+    finally { setSending(false); setTimeout(() => setResult(null), 5000); }
+  };
+
+  return (
+    <>
+      <SectionHeader title="Edit Existing Embed (Optional)" />
+      <div className="section-row space-y-2">
+        <p className="text-xs text-gray-500">Load an existing embed by its message ID to edit it.</p>
+        <div className="flex gap-2">
+          <input type="text" value={editMessageId} onChange={(e) => setEditMessageId(e.target.value)}
+            placeholder="Message ID" className="input flex-1 text-sm font-mono" />
+          <button onClick={loadExisting} disabled={loadingEdit || !editMessageId.trim()}
+            className="btn-secondary text-xs px-3 flex items-center gap-1.5">
+            {loadingEdit ? <Loader2 size={12} className="animate-spin" /> : <Eye size={12} />} Load
+          </button>
+        </div>
+      </div>
+
+      <SectionHeader title="Embed Builder" />
+      <div className="p-4 rounded-xl bg-[#0a0a0a] border border-[#1e1e1e] space-y-3">
+        <div className="flex items-center gap-2">
+          <div>
+            <p className="text-xs text-gray-500 mb-1">Embed Color</p>
+            <div className="flex gap-2">
+              <input type="color" value={`#${embed.color || "ef4444"}`}
+                onChange={(e) => setE("color", e.target.value.replace("#", ""))}
+                className="w-10 h-9 rounded cursor-pointer border border-[#2a2a2a] bg-transparent" />
+              <input type="text" value={embed.color} onChange={(e) => setE("color", e.target.value.replace("#", ""))}
+                placeholder="ef4444" className="input w-28 font-mono text-sm" />
+            </div>
+          </div>
+        </div>
+        <div><p className="text-xs text-gray-500 mb-1">Author Name</p>
+          <input type="text" value={embed.authorName} onChange={(e) => setE("authorName", e.target.value)} placeholder="Author name" className="input text-sm" /></div>
+        <div><p className="text-xs text-gray-500 mb-1">Author Icon URL</p>
+          <input type="text" value={embed.authorIcon} onChange={(e) => setE("authorIcon", e.target.value)} placeholder="https://..." className="input text-sm" /></div>
+        <div><p className="text-xs text-gray-500 mb-1">Title</p>
+          <input type="text" value={embed.title} onChange={(e) => setE("title", e.target.value)} placeholder="Embed title" className="input text-sm" /></div>
+        <div><p className="text-xs text-gray-500 mb-1">Description</p>
+          <textarea value={embed.description} onChange={(e) => setE("description", e.target.value)}
+            rows={4} placeholder="Embed description..." className="input" style={{ resize: "vertical" }} /></div>
+        <div className="grid grid-cols-2 gap-3">
+          <div><p className="text-xs text-gray-500 mb-1">Thumbnail URL</p>
+            <input type="text" value={embed.thumbnail} onChange={(e) => setE("thumbnail", e.target.value)} placeholder="https://..." className="input text-sm" /></div>
+          <div><p className="text-xs text-gray-500 mb-1">Image URL</p>
+            <input type="text" value={embed.image} onChange={(e) => setE("image", e.target.value)} placeholder="https://..." className="input text-sm" /></div>
+        </div>
+        <div><p className="text-xs text-gray-500 mb-1">Footer Text</p>
+          <input type="text" value={embed.footerText} onChange={(e) => setE("footerText", e.target.value)} placeholder="Footer text" className="input text-sm" /></div>
+        <div><p className="text-xs text-gray-500 mb-1">Footer Icon URL</p>
+          <input type="text" value={embed.footerIcon} onChange={(e) => setE("footerIcon", e.target.value)} placeholder="https://..." className="input text-sm" /></div>
+      </div>
+
+      <SectionHeader title="Live Preview" />
+      <DiscordEmbedPreview embed={embed} />
+
+      <SectionHeader title="Send Embed" />
+      <div className="section-row space-y-2">
+        <select value={channelId} onChange={(e) => setChannelId(e.target.value)} className="input">
+          <option value="">— Select Channel —</option>
+          {channels.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
+        <button onClick={sendEmbed} disabled={sending || !channelId}
+          className="btn-primary w-full flex items-center justify-center gap-2">
+          {sending ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+          {sending ? "Sending…" : editMessageId ? "Edit Embed" : "Send Embed"}
+        </button>
+        {result && (
+          <p className={`text-xs ${result.type === "success" ? "text-green-400" : "text-red-400"}`}>{result.text}</p>
+        )}
+      </div>
+    </>
+  );
+}
+
+function IgnorePanel({ local, set, channels, roles }: {
+  local: Record<string, unknown>; set: (k: string, v: unknown) => void;
+  channels: Channel[]; roles: Role[];
+}) {
+  const ig = local;
+  const ignoredChannels: string[] = (ig.channels as string[]) || [];
+  const ignoredUsers: string[] = (ig.users as string[]) || [];
+  const bypassRoles: string[] = (ig.bypassRoles as string[]) || [];
+  const [newUser, setNewUser] = useState("");
+
+  return (
+    <>
+      <Banner color="gray">Configure which channels, users and roles are ignored by the bot globally.</Banner>
+
+      <SectionHeader title="Ignored Channels" />
+      <p className="text-xs text-gray-500 mb-2">Bot ignores all commands in these channels.</p>
+      <div className="flex flex-wrap gap-1.5 mb-2 min-h-[24px]">
+        {ignoredChannels.length === 0 && <span className="text-xs text-gray-600 italic">None</span>}
+        {ignoredChannels.map((cid) => {
+          const ch = channels.find((c) => c.id === cid);
+          return (
+            <span key={cid} className="flex items-center gap-1 text-xs bg-[#1c1c1c] text-gray-300 px-2 py-1 rounded-full border border-[#2a2a2a]">
+              {ch ? ch.name : cid}
+              <button onClick={() => set("channels", ignoredChannels.filter((x) => x !== cid))}
+                className="text-gray-500 hover:text-red-400"><X size={10} /></button>
+            </span>
+          );
+        })}
+      </div>
+      <select defaultValue="" onChange={(e) => {
+        if (e.target.value && !ignoredChannels.includes(e.target.value)) {
+          set("channels", [...ignoredChannels, e.target.value]);
+          e.target.value = "";
+        }
+      }} className="input mb-4">
+        <option value="">— Add Channel to Ignore —</option>
+        {channels.filter((c) => !ignoredChannels.includes(c.id)).map((c) => (
+          <option key={c.id} value={c.id}>{c.name}</option>
+        ))}
+      </select>
+
+      <SectionHeader title="Ignored Users" />
+      <p className="text-xs text-gray-500 mb-2">Bot ignores all commands from these users.</p>
+      <div className="flex flex-wrap gap-1.5 mb-2 min-h-[24px]">
+        {ignoredUsers.length === 0 && <span className="text-xs text-gray-600 italic">None</span>}
+        {ignoredUsers.map((uid) => (
+          <span key={uid} className="flex items-center gap-1 text-xs bg-[#1c1c1c] text-gray-300 px-2 py-1 rounded-full border border-[#2a2a2a]">
+            {uid}
+            <button onClick={() => set("users", ignoredUsers.filter((x) => x !== uid))}
+              className="text-gray-500 hover:text-red-400"><X size={10} /></button>
+          </span>
+        ))}
+      </div>
+      <div className="flex gap-2 mb-4">
+        <input type="text" value={newUser} onChange={(e) => setNewUser(e.target.value)}
+          placeholder="User ID" className="input flex-1 text-sm"
+          onKeyDown={(e) => { if (e.key === "Enter" && newUser.trim()) { set("users", [...ignoredUsers, newUser.trim()]); setNewUser(""); } }} />
+        <button onClick={() => { if (newUser.trim()) { set("users", [...ignoredUsers, newUser.trim()]); setNewUser(""); } }}
+          className="btn-secondary text-xs px-3"><Plus size={12} /></button>
+      </div>
+
+      <SectionHeader title="Bypass Roles" />
+      <p className="text-xs text-gray-500 mb-2">These roles bypass all ignore settings.</p>
+      <RowMultiRole label="Bypass Roles" roles={roles} values={bypassRoles} onChange={(v) => set("bypassRoles", v)} />
+    </>
+  );
+}
+
 // ─── Main Component ─────────────────────────────────────────────────────────
 export default function ModulePanel({ moduleId, guildId, isPremium, isOwner, settings, onSave }: Props) {
   const meta = META[moduleId];
@@ -421,257 +1233,10 @@ export default function ModulePanel({ moduleId, guildId, isPremium, isOwner, set
       </div>
 
       {/* ── ANTINUKE ──────────────────────────────────────── */}
-      {moduleId === "antinuke" && (() => {
-        const an = local;
-        const whitelist: string[] = (an.whitelist as string[]) || [];
-        const [newWlId, setNewWlId] = useState("");
-        const [wlStatus, setWlStatus] = useState<string | null>(null);
-        const [extraOwnerInput, setExtraOwnerInput] = useState(String(an.extraOwner || ""));
-        const [eoStatus, setEoStatus] = useState<string | null>(null);
-
-        const addToWhitelist = async () => {
-          if (!newWlId.trim()) return;
-          const updated = [...whitelist, newWlId.trim()];
-          set("whitelist", updated);
-          setNewWlId("");
-          setWlStatus("Added. Save changes to apply.");
-        };
-
-        const removeFromWhitelist = (uid: string) => {
-          set("whitelist", whitelist.filter((x) => x !== uid));
-          setWlStatus("Removed. Save changes to apply.");
-        };
-
-        const setExtraOwner = () => {
-          set("extraOwner", extraOwnerInput.trim() || null);
-          setEoStatus("Extra owner set. Save to apply.");
-        };
-
-        const modules = [
-          { key: "antiban",       label: "Anti Ban",          desc: "Prevent mass bans" },
-          { key: "antikick",      label: "Anti Kick",         desc: "Prevent mass kicks" },
-          { key: "antibotadd",    label: "Anti Bot Add",      desc: "Prevent adding bots" },
-          { key: "antichcr",      label: "Anti Channel Create",desc: "Prevent mass channel creation" },
-          { key: "antichdl",      label: "Anti Channel Delete",desc: "Prevent mass channel deletion" },
-          { key: "antieveryone",  label: "Anti Everyone Ping", desc: "Block @everyone pings" },
-          { key: "antirlcr",      label: "Anti Role Create",  desc: "Prevent mass role creation" },
-          { key: "antirldl",      label: "Anti Role Delete",  desc: "Prevent mass role deletion" },
-          { key: "antiwebhookcr", label: "Anti Webhook Create",desc: "Block webhook creation" },
-          { key: "antiwebhookdl", label: "Anti Webhook Delete",desc: "Block webhook deletion" },
-          { key: "antiprune",     label: "Anti Prune",        desc: "Prevent member pruning" },
-        ];
-
-        return (
-          <>
-            <Banner color="red">Anti-Nuke protects your server from raids and nukes. Only the server owner and extra owner can modify these settings.</Banner>
-
-            <SectionHeader title="Main Toggle" />
-            <RowToggle label="Enable Anti-Nuke" desc="Activate server protection"
-              checked={Boolean(an.enabled)} onChange={(v) => set("enabled", v)} disabled={readOnly} />
-
-            <SectionHeader title="Punishment" />
-            <RowDropdown label="Default Punishment" desc="Action taken against violators"
-              options={[
-                { value: "ban",     label: "Ban" },
-                { value: "kick",    label: "Kick" },
-                { value: "temprole",label: "Temp Role" },
-              ]}
-              value={String(an.punishment || "ban")} onChange={(v) => set("punishment", v)} disabled={readOnly} />
-
-            <SectionHeader title="Protection Modules" />
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {modules.map(({ key, label, desc }) => (
-                <div key={key} className="flex items-center justify-between p-3 rounded-xl bg-[#0a0a0a] border border-[#1e1e1e]">
-                  <div>
-                    <p className="text-sm font-medium text-white">{label}</p>
-                    <p className="text-xs text-gray-600">{desc}</p>
-                  </div>
-                  <label className={`toggle flex-shrink-0 ${readOnly ? "opacity-40 pointer-events-none" : ""}`}>
-                    <input type="checkbox" checked={Boolean(an[key as keyof typeof an] !== false)}
-                      onChange={(e) => set(key, e.target.checked)} />
-                    <div className="toggle-track"><div className="toggle-thumb" /></div>
-                  </label>
-                </div>
-              ))}
-            </div>
-
-            <SectionHeader title="Extra Owner" />
-            <div className="section-row space-y-2">
-              <p className="text-sm font-medium text-white">Extra Owner</p>
-              <p className="text-xs text-gray-500">This user gets the same Anti-Nuke access as the server owner.</p>
-              {an.extraOwner && (
-                <div className="flex items-center gap-2 text-xs bg-orange-500/10 border border-orange-500/20 text-orange-300 px-3 py-2 rounded-lg">
-                  <Crown size={12} />
-                  Current Extra Owner: <code>{String(an.extraOwner)}</code>
-                  {!readOnly && (
-                    <button onClick={() => { set("extraOwner", null); setEoStatus("Removed. Save to apply."); }}
-                      className="ml-auto text-orange-500 hover:text-red-400"><X size={12} /></button>
-                  )}
-                </div>
-              )}
-              {!readOnly && (
-                <div className="flex gap-2">
-                  <input type="text" value={extraOwnerInput} onChange={(e) => setExtraOwnerInput(e.target.value)}
-                    placeholder="User ID or username" className="input flex-1 text-sm" />
-                  <button onClick={setExtraOwner} className="btn-secondary text-xs px-3">Set</button>
-                </div>
-              )}
-              {eoStatus && <p className="text-xs text-green-400">{eoStatus}</p>}
-            </div>
-
-            <SectionHeader title="Whitelist" />
-            <div className="section-row space-y-2">
-              <p className="text-sm font-medium text-white">Whitelisted Users</p>
-              <p className="text-xs text-gray-500">These users are exempt from Anti-Nuke protection.</p>
-              <div className="flex flex-wrap gap-1.5 min-h-[30px]">
-                {whitelist.length === 0 && <span className="text-xs text-gray-600 italic">No whitelisted users</span>}
-                {whitelist.map((uid) => (
-                  <span key={uid} className="flex items-center gap-1 text-xs bg-[#1c1c1c] text-gray-300 px-2 py-1 rounded-full border border-[#2a2a2a]">
-                    {uid}
-                    {!readOnly && (
-                      <button onClick={() => removeFromWhitelist(uid)} className="text-gray-500 hover:text-red-400 transition-colors">
-                        <X size={10} />
-                      </button>
-                    )}
-                  </span>
-                ))}
-              </div>
-              {!readOnly && (
-                <div className="flex gap-2">
-                  <input type="text" value={newWlId} onChange={(e) => setNewWlId(e.target.value)}
-                    placeholder="User ID or username" className="input flex-1 text-sm"
-                    onKeyDown={(e) => e.key === "Enter" && addToWhitelist()} />
-                  <button onClick={addToWhitelist} className="btn-secondary text-xs px-3">
-                    <Plus size={12} />
-                  </button>
-                </div>
-              )}
-              {wlStatus && <p className="text-xs text-green-400">{wlStatus}</p>}
-            </div>
-          </>
-        );
-      })()}
+      {moduleId === "antinuke" && <AntinukePanel local={local} set={set} readOnly={readOnly} guildId={guildId} />}
 
       {/* ── AUTOMOD ──────────────────────────────────────── */}
-      {moduleId === "automod" && (() => {
-        const am = local;
-        const activeEvents: string[] = (am.activeEvents as string[]) || [];
-        const ignoredUsers: string[] = (am.ignoredUsers as string[]) || [];
-        const ignoredChannels: string[] = (am.ignoredChannels as string[]) || [];
-        const [newIgnoreUser, setNewIgnoreUser] = useState("");
-        const [newIgnoreCh, setNewIgnoreCh] = useState("");
-        const punishMap: Record<string, string> = (am.punishments as Record<string, string>) || {};
-
-        const toggleEvent = (event: string) => {
-          if (activeEvents.includes(event)) set("activeEvents", activeEvents.filter((e) => e !== event));
-          else set("activeEvents", [...activeEvents, event]);
-        };
-
-        const setPunishment = (event: string, punishment: string) => {
-          set("punishments", { ...punishMap, [event]: punishment });
-        };
-
-        return (
-          <>
-            <SectionHeader title="Main Toggle" />
-            <RowToggle label="Enable AutoMod" desc="Automatically moderate messages"
-              checked={Boolean(am.enabled)} onChange={(v) => set("enabled", v)} />
-
-            <SectionHeader title="Log Channel" />
-            <RowSelect label="AutoMod Log Channel" desc="Where AutoMod actions are logged"
-              channels={channels} value={String(am.logChannel || "")} onChange={(v) => set("logChannel", v)} />
-
-            <SectionHeader title="Filters" />
-            <div className="space-y-2">
-              {AUTOMOD_EVENTS.map(({ key, label, desc }) => {
-                const isActive = activeEvents.includes(key);
-                return (
-                  <div key={key} className={`p-3 rounded-xl border transition-colors ${isActive ? "bg-orange-500/5 border-orange-500/20" : "bg-[#0a0a0a] border-[#1e1e1e]"}`}>
-                    <div className="flex items-center justify-between mb-2">
-                      <div>
-                        <p className="text-sm font-medium text-white">{label}</p>
-                        <p className="text-xs text-gray-500">{desc}</p>
-                      </div>
-                      <label className="toggle flex-shrink-0">
-                        <input type="checkbox" checked={isActive} onChange={() => toggleEvent(key)} />
-                        <div className="toggle-track"><div className="toggle-thumb" /></div>
-                      </label>
-                    </div>
-                    {isActive && (
-                      <select
-                        value={punishMap[key] || "mute"}
-                        onChange={(e) => setPunishment(key, e.target.value)}
-                        className="input text-xs w-36"
-                      >
-                        <option value="delete">Delete only</option>
-                        <option value="mute">Mute</option>
-                        <option value="kick">Kick</option>
-                        <option value="ban">Ban</option>
-                        <option value="warn">Warn</option>
-                      </select>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
-            <SectionHeader title="Ignored Users" />
-            <div className="section-row space-y-2">
-              <p className="text-xs text-gray-500">These users are exempt from AutoMod.</p>
-              <div className="flex flex-wrap gap-1.5 min-h-[24px]">
-                {ignoredUsers.length === 0 && <span className="text-xs text-gray-600 italic">None</span>}
-                {ignoredUsers.map((uid) => (
-                  <span key={uid} className="flex items-center gap-1 text-xs bg-[#1c1c1c] text-gray-300 px-2 py-1 rounded-full border border-[#2a2a2a]">
-                    {uid}
-                    <button onClick={() => set("ignoredUsers", ignoredUsers.filter((x) => x !== uid))}
-                      className="text-gray-500 hover:text-red-400"><X size={10} /></button>
-                  </span>
-                ))}
-              </div>
-              <div className="flex gap-2">
-                <input type="text" value={newIgnoreUser} onChange={(e) => setNewIgnoreUser(e.target.value)}
-                  placeholder="User ID" className="input flex-1 text-sm"
-                  onKeyDown={(e) => { if (e.key === "Enter" && newIgnoreUser.trim()) { set("ignoredUsers", [...ignoredUsers, newIgnoreUser.trim()]); setNewIgnoreUser(""); } }} />
-                <button onClick={() => { if (newIgnoreUser.trim()) { set("ignoredUsers", [...ignoredUsers, newIgnoreUser.trim()]); setNewIgnoreUser(""); } }}
-                  className="btn-secondary text-xs px-3"><Plus size={12} /></button>
-              </div>
-            </div>
-
-            <SectionHeader title="Ignored Channels" />
-            <div className="section-row space-y-2">
-              <p className="text-xs text-gray-500">AutoMod won't act in these channels.</p>
-              <div className="flex flex-wrap gap-1.5 min-h-[24px]">
-                {ignoredChannels.length === 0 && <span className="text-xs text-gray-600 italic">None</span>}
-                {ignoredChannels.map((cid) => {
-                  const ch = channels.find((c) => c.id === cid);
-                  return (
-                    <span key={cid} className="flex items-center gap-1 text-xs bg-[#1c1c1c] text-gray-300 px-2 py-1 rounded-full border border-[#2a2a2a]">
-                      {ch ? ch.name : cid}
-                      <button onClick={() => set("ignoredChannels", ignoredChannels.filter((x) => x !== cid))}
-                        className="text-gray-500 hover:text-red-400"><X size={10} /></button>
-                    </span>
-                  );
-                })}
-              </div>
-              <select defaultValue="" onChange={(e) => {
-                if (e.target.value && !ignoredChannels.includes(e.target.value)) {
-                  set("ignoredChannels", [...ignoredChannels, e.target.value]);
-                  e.target.value = "";
-                }
-              }} className="input">
-                <option value="">— Add Channel —</option>
-                {channels.filter((c) => !ignoredChannels.includes(c.id)).map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
-            </div>
-
-            <SectionHeader title="Bypass Role" />
-            <RowRoleSelect label="AutoMod Bypass Role" desc="Members with this role ignore AutoMod"
-              roles={roles} value={String(am.bypassRole || "")} onChange={(v) => set("bypassRole", v)} />
-          </>
-        );
-      })()}
+      {moduleId === "automod" && <AutomodPanel local={local} set={set} channels={channels} roles={roles} />}
 
       {/* ── LOGGING ───────────────────────────────────────── */}
       {moduleId === "logging" && (() => {
@@ -699,191 +1264,7 @@ export default function ModulePanel({ moduleId, guildId, isPremium, isOwner, set
       })()}
 
       {/* ── WELCOME ───────────────────────────────────────── */}
-      {moduleId === "welcome" && (() => {
-        const wc = local;
-        const [testSending, setTestSending] = useState(false);
-        const [testResult, setTestResult] = useState<string | null>(null);
-
-        const sendTest = async () => {
-          if (!wc.channelId) { setTestResult("Please select a channel first."); return; }
-          setTestSending(true);
-          setTestResult(null);
-          try {
-            const res = await fetch(`/api/settings/${guildId}`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ module: "welcome_test", settings: { channelId: wc.channelId } }),
-            });
-            const data = await res.json();
-            setTestResult(data.success ? "Test message sent!" : (data.error || "Failed"));
-          } catch { setTestResult("Error sending test."); }
-          finally { setTestSending(false); setTimeout(() => setTestResult(null), 5000); }
-        };
-
-        const resetWelcome = () => {
-          setLocal({
-            enabled: false,
-            welcomeType: "embed",
-            channelId: null,
-            embed: {
-              title: "Welcome to {server_name}! 🎉",
-              description: "Hey {user_mention}, welcome to **{server_name}**!\nYou are member **#{server_membercount}**.",
-              color: "ef4444",
-              authorName: "",
-              authorIcon: "",
-              footerText: "",
-              footerIcon: "",
-              thumbnail: "",
-              image: "",
-            },
-            boosterEnabled: false,
-            boostChannelId: null,
-            boostMessage: "🎉 {user_mention} just boosted {server_name}! We now have {boost_count} boosts!",
-          });
-        };
-
-        const embed = (wc.embed as Record<string, string>) || {};
-        const setEmbed = (k: string, v: string) => set("embed", { ...embed, [k]: v });
-
-        const toBase64 = (file: File): Promise<string> =>
-          new Promise((res, rej) => {
-            const reader = new FileReader();
-            reader.onload = () => res((reader.result as string).split(",")[1]);
-            reader.onerror = rej;
-            reader.readAsDataURL(file);
-          });
-
-        return (
-          <>
-            <SectionHeader title="Welcome Messages" />
-            <RowToggle label="Enable Welcome Messages" desc="Send a message when a new member joins"
-              checked={Boolean(wc.enabled)} onChange={(v) => set("enabled", v)} />
-            <RowSelect label="Welcome Channel" desc="Where welcome messages are sent"
-              channels={channels} value={String(wc.channelId || "")} onChange={(v) => set("channelId", v)}
-              placeholder="— Select Channel —" />
-
-            {wc.enabled && (
-              <>
-                <SectionHeader title="Embed Configuration" />
-                <div className="p-4 rounded-xl bg-[#0a0a0a] border border-[#1e1e1e] space-y-3">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <p className="text-xs text-gray-500 mb-1">Embed Color</p>
-                      <div className="flex gap-2">
-                        <input type="color" value={`#${embed.color || "ef4444"}`}
-                          onChange={(e) => setEmbed("color", e.target.value.replace("#", ""))}
-                          className="w-10 h-9 rounded cursor-pointer border border-[#2a2a2a] bg-transparent" />
-                        <input type="text" value={embed.color || "ef4444"} onChange={(e) => setEmbed("color", e.target.value.replace("#", ""))}
-                          placeholder="ef4444" className="input flex-1 font-mono text-sm" />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <p className="text-xs text-gray-500 mb-1">Author Name</p>
-                    <input type="text" value={embed.authorName || ""} onChange={(e) => setEmbed("authorName", e.target.value)}
-                      placeholder="Author name (optional)" className="input text-sm" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500 mb-1">Author Icon URL</p>
-                    <input type="text" value={embed.authorIcon || ""} onChange={(e) => setEmbed("authorIcon", e.target.value)}
-                      placeholder="https://..." className="input text-sm" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500 mb-1">Embed Title</p>
-                    <input type="text" value={embed.title || ""} onChange={(e) => setEmbed("title", e.target.value)}
-                      placeholder="Welcome to {server_name}! 🎉" className="input text-sm" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500 mb-1">Description</p>
-                    <p className="text-[10px] text-gray-600 mb-1">Variables: {"{user_mention} {user_name} {server_name} {server_membercount}"}</p>
-                    <textarea value={embed.description || ""} onChange={(e) => setEmbed("description", e.target.value)}
-                      rows={3} placeholder="Welcome message..." className="input" style={{ resize: "vertical" }} />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <p className="text-xs text-gray-500 mb-1">Thumbnail URL</p>
-                      <input type="text" value={embed.thumbnail || ""} onChange={(e) => setEmbed("thumbnail", e.target.value)}
-                        placeholder="Use {user_avatar} or URL" className="input text-sm" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500 mb-1">Image URL</p>
-                      <input type="text" value={embed.image || ""} onChange={(e) => setEmbed("image", e.target.value)}
-                        placeholder="Banner image URL" className="input text-sm" />
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500 mb-1">Footer Text</p>
-                    <input type="text" value={embed.footerText || ""} onChange={(e) => setEmbed("footerText", e.target.value)}
-                      placeholder="Footer text..." className="input text-sm" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500 mb-1">Footer Icon URL</p>
-                    <input type="text" value={embed.footerIcon || ""} onChange={(e) => setEmbed("footerIcon", e.target.value)}
-                      placeholder="https://..." className="input text-sm" />
-                  </div>
-
-                  <UploadField label="Upload Thumbnail" accept="image/*"
-                    preview={wc.thumbnailPreview as string}
-                    onFile={async (f) => {
-                      set("thumbnailPreview", URL.createObjectURL(f));
-                      set("thumbnailBase64", await toBase64(f));
-                      setEmbed("thumbnail", "__uploaded__");
-                    }} />
-                  <UploadField label="Upload Banner Image" accept="image/*"
-                    preview={wc.bannerPreview as string}
-                    onFile={async (f) => {
-                      set("bannerPreview", URL.createObjectURL(f));
-                      set("bannerBase64", await toBase64(f));
-                      setEmbed("image", "__uploaded__");
-                    }} />
-                </div>
-
-                {/* Live Preview */}
-                <div className="mt-3">
-                  <p className="text-xs text-gray-500 mb-2">Preview</p>
-                  <DiscordEmbedPreview embed={{
-                    color: embed.color,
-                    authorName: embed.authorName,
-                    authorIcon: embed.authorIcon,
-                    title: (embed.title || "").replace("{server_name}", "Your Server"),
-                    description: (embed.description || "").replace("{user_mention}", "@NewMember").replace("{user_name}", "NewMember").replace("{server_name}", "Your Server").replace("{server_membercount}", "1234"),
-                    thumbnail: embed.thumbnail?.startsWith("__") ? undefined : embed.thumbnail,
-                    image: embed.image?.startsWith("__") ? wc.bannerPreview as string : embed.image,
-                    footerText: embed.footerText,
-                    footerIcon: embed.footerIcon,
-                  }} />
-                </div>
-
-                <div className="flex gap-2 mt-3">
-                  <button onClick={sendTest} disabled={testSending || !wc.channelId}
-                    className="btn-secondary text-xs flex items-center gap-1.5">
-                    {testSending ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
-                    Send Test
-                  </button>
-                  <button onClick={resetWelcome} className="btn-secondary text-xs text-red-400 hover:text-red-300 flex items-center gap-1.5">
-                    <RefreshCw size={12} /> Reset
-                  </button>
-                </div>
-                {testResult && <p className="text-xs text-green-400 mt-1">{testResult}</p>}
-              </>
-            )}
-
-            <SectionHeader title="Booster Messages" />
-            <RowToggle label="Enable Booster Messages" desc="Send a message when someone boosts the server"
-              checked={Boolean(wc.boosterEnabled)} onChange={(v) => set("boosterEnabled", v)} />
-            {wc.boosterEnabled && (
-              <>
-                <RowSelect label="Boost Channel" channels={channels} value={String(wc.boostChannelId || "")}
-                  onChange={(v) => set("boostChannelId", v)} placeholder="— Select Channel —" />
-                <RowTextarea label="Boost Message" desc="Variables: {user_mention} {server_name} {boost_count}"
-                  value={String(wc.boostMessage || "")} onChange={(v) => set("boostMessage", v)}
-                  placeholder="🎉 {user_mention} just boosted {server_name}!" />
-              </>
-            )}
-          </>
-        );
-      })()}
+      {moduleId === "welcome" && <WelcomePanel local={local} set={set} setLocal={setLocal} channels={channels} guildId={guildId} />}
 
       {/* ── LEVELING ──────────────────────────────────────── */}
       {moduleId === "leveling" && !premiumLocked && (() => {
@@ -917,204 +1298,10 @@ export default function ModulePanel({ moduleId, guildId, isPremium, isOwner, set
       })()}
 
       {/* ── GIVEAWAYS ─────────────────────────────────────── */}
-      {moduleId === "giveaway" && (() => {
-        const [newGw, setNewGw] = useState({ prize: "", winners: "1", duration: "1h", channelId: "" });
-        const [creating, setCreating] = useState(false);
-        const [createResult, setCreateResult] = useState<{ type: "success" | "error"; text: string } | null>(null);
-        const [endingId, setEndingId] = useState<string | null>(null);
-        const [confirmEnd, setConfirmEnd] = useState<string | null>(null);
-        const giveaways = (settings.giveaways as Record<string, unknown>[]) || [];
-
-        const createGiveaway = async () => {
-          if (!newGw.prize || !newGw.channelId) return;
-          setCreating(true);
-          try {
-            const res = await fetch(`/api/settings/${guildId}`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ module: "giveaway_create", settings: newGw }),
-            });
-            const data = await res.json();
-            setCreateResult({ type: data.success ? "success" : "error", text: data.message || data.error || "Done" });
-            if (data.success) setNewGw({ prize: "", winners: "1", duration: "1h", channelId: "" });
-          } catch { setCreateResult({ type: "error", text: "Network error" }); }
-          finally { setCreating(false); setTimeout(() => setCreateResult(null), 5000); }
-        };
-
-        const endGiveaway = async (messageId: string) => {
-          setEndingId(messageId);
-          try {
-            await fetch(`/api/settings/${guildId}`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ module: "giveaway_end", settings: { messageId } }),
-            });
-          } catch {}
-          finally { setEndingId(null); setConfirmEnd(null); }
-        };
-
-        return (
-          <>
-            <SectionHeader title="Start New Giveaway" />
-            <div className="p-4 rounded-xl bg-[#0a0a0a] border border-[#1e1e1e] space-y-3">
-              <RowInput label="Prize" value={newGw.prize} onChange={(v) => setNewGw((p) => ({ ...p, prize: v }))}
-                placeholder="e.g. Nitro Classic, Discord Server Boost" />
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <p className="text-xs text-gray-500 mb-1">Winners</p>
-                  <input type="number" min="1" max="20" value={newGw.winners}
-                    onChange={(e) => setNewGw((p) => ({ ...p, winners: e.target.value }))} className="input" />
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500 mb-1">Duration</p>
-                  <select value={newGw.duration} onChange={(e) => setNewGw((p) => ({ ...p, duration: e.target.value }))} className="input">
-                    <option value="30m">30 Minutes</option>
-                    <option value="1h">1 Hour</option>
-                    <option value="6h">6 Hours</option>
-                    <option value="12h">12 Hours</option>
-                    <option value="1d">1 Day</option>
-                    <option value="3d">3 Days</option>
-                    <option value="7d">7 Days</option>
-                  </select>
-                </div>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500 mb-1">Channel</p>
-                <select value={newGw.channelId} onChange={(e) => setNewGw((p) => ({ ...p, channelId: e.target.value }))} className="input">
-                  <option value="">— Select Channel —</option>
-                  {channels.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-              </div>
-              <button onClick={createGiveaway} disabled={creating || !newGw.prize || !newGw.channelId}
-                className="btn-primary w-full flex items-center justify-center gap-2">
-                {creating ? <Loader2 size={14} className="animate-spin" /> : <Gift size={14} />}
-                {creating ? "Starting…" : "Start Giveaway"}
-              </button>
-              {createResult && (
-                <p className={`text-xs ${createResult.type === "success" ? "text-green-400" : "text-red-400"}`}>{createResult.text}</p>
-              )}
-            </div>
-
-            <SectionHeader title="Active Giveaways" />
-            {giveaways.length === 0 ? (
-              <div className="text-center py-8 text-gray-600">
-                <Gift size={28} className="mx-auto mb-3 opacity-30" />
-                <p className="text-sm">No active giveaways.</p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {giveaways.map((gw, i) => (
-                  <div key={i} className="p-4 rounded-xl bg-[#0a0a0a] border border-[#1e1e1e]">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-semibold text-white text-sm">{String(gw.prize)}</p>
-                        <p className="text-xs text-gray-500">
-                          {String(gw.winners)} winner(s) • Ends: {new Date(Number(gw.endsAt) * 1000).toLocaleString()}
-                        </p>
-                      </div>
-                      <div className="flex gap-2">
-                        {confirmEnd === String(gw.messageId) ? (
-                          <>
-                            <button onClick={() => endGiveaway(String(gw.messageId))} disabled={endingId === String(gw.messageId)}
-                              className="text-xs px-3 py-1.5 rounded-lg bg-red-500/20 border border-red-500/40 text-red-300 hover:bg-red-500/30">
-                              {endingId === String(gw.messageId) ? "Ending…" : "Confirm End"}
-                            </button>
-                            <button onClick={() => setConfirmEnd(null)} className="text-xs px-2 py-1.5 rounded-lg border border-[#2a2a2a] text-gray-500">
-                              Cancel
-                            </button>
-                          </>
-                        ) : (
-                          <button onClick={() => setConfirmEnd(String(gw.messageId))}
-                            className="text-xs px-3 py-1.5 rounded-lg bg-[#1a1a1a] border border-[#2a2a2a] text-gray-400 hover:text-red-400 hover:border-red-500/30">
-                            End Giveaway
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </>
-        );
-      })()}
+      {moduleId === "giveaway" && <GiveawayPanel channels={channels} guildId={guildId} settings={settings} />}
 
       {/* ── REACTION ROLES ────────────────────────────────── */}
-      {moduleId === "reactionroles" && (() => {
-        const rr = local;
-        const panels: Record<string, unknown>[] = (rr.panels as Record<string, unknown>[]) || [];
-        const [messageId, setMessageId] = useState(String(rr.activeMessageId || ""));
-        const [loading, setLoading] = useState(false);
-        const [rrConfig, setRrConfig] = useState<{ emoji: string; roleId: string }[]>([]);
-        const [rrStatus, setRrStatus] = useState<string | null>(null);
-
-        const loadPanel = async () => {
-          if (!messageId.trim()) return;
-          setLoading(true);
-          try {
-            const res = await fetch(`/api/settings/${guildId}?reactionroles_msg=${messageId}`);
-            const data = await res.json();
-            if (data.reactionroles_panel) {
-              setRrConfig(data.reactionroles_panel.mappings || []);
-              setRrStatus("Panel loaded.");
-            } else {
-              setRrStatus("No reaction role panel found for that message ID.");
-            }
-          } catch { setRrStatus("Error loading panel."); }
-          finally { setLoading(false); setTimeout(() => setRrStatus(null), 4000); }
-        };
-
-        const addMapping = () => setRrConfig((prev) => [...prev, { emoji: "", roleId: "" }]);
-        const removeMapping = (i: number) => setRrConfig((prev) => prev.filter((_, j) => j !== i));
-        const updateMapping = (i: number, k: "emoji" | "roleId", v: string) =>
-          setRrConfig((prev) => prev.map((m, j) => j === i ? { ...m, [k]: v } : m));
-
-        return (
-          <>
-            <SectionHeader title="Load Existing Panel" />
-            <div className="section-row space-y-2">
-              <p className="text-xs text-gray-500">Enter the message ID of an existing reaction role panel to edit it.</p>
-              <div className="flex gap-2">
-                <input type="text" value={messageId} onChange={(e) => setMessageId(e.target.value)}
-                  placeholder="Message ID" className="input flex-1 text-sm font-mono" />
-                <button onClick={loadPanel} disabled={loading || !messageId.trim()}
-                  className="btn-secondary text-xs px-3 flex items-center gap-1.5">
-                  {loading ? <Loader2 size={12} className="animate-spin" /> : <Eye size={12} />} Load
-                </button>
-              </div>
-              {rrStatus && <p className="text-xs text-green-400">{rrStatus}</p>}
-            </div>
-
-            <SectionHeader title="Reaction Role Mappings" />
-            <div className="space-y-2">
-              {rrConfig.map((m, i) => (
-                <div key={i} className="flex items-center gap-2 p-3 rounded-xl bg-[#0a0a0a] border border-[#1e1e1e]">
-                  <input type="text" value={m.emoji} onChange={(e) => updateMapping(i, "emoji", e.target.value)}
-                    placeholder="Emoji" className="input w-20 text-center text-lg" />
-                  <select value={m.roleId} onChange={(e) => updateMapping(i, "roleId", e.target.value)} className="input flex-1">
-                    <option value="">— Select Role —</option>
-                    {roles.map((r) => <option key={r.id} value={r.id}>@{r.name}</option>)}
-                  </select>
-                  <button onClick={() => removeMapping(i)} className="text-gray-600 hover:text-red-400 transition-colors p-1.5 rounded-lg hover:bg-red-500/10">
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              ))}
-              {rrConfig.length === 0 && (
-                <p className="text-xs text-gray-600 text-center py-3">No mappings yet. Add emoji → role pairs below.</p>
-              )}
-              <button onClick={addMapping} className="btn-secondary text-xs w-full flex items-center justify-center gap-1.5">
-                <Plus size={12} /> Add Emoji → Role
-              </button>
-            </div>
-
-            <div className="mt-4">
-              <p className="text-xs text-gray-500 mb-2">When ready, save changes and the bot will update the reaction role panel.</p>
-              <input type="hidden" value={JSON.stringify(rrConfig)} onChange={() => {}} />
-            </div>
-          </>
-        );
-      })()}
+      {moduleId === "reactionroles" && <ReactionRolesPanel local={local} set={set} roles={roles} guildId={guildId} />}
 
       {/* ── AUTOROLE ──────────────────────────────────────── */}
       {moduleId === "autorole" && (() => {
@@ -1397,115 +1584,7 @@ export default function ModulePanel({ moduleId, guildId, isPremium, isOwner, set
       })()}
 
       {/* ── EMBEDS ────────────────────────────────────────── */}
-      {moduleId === "embeds" && (() => {
-        const [embed, setEmbed] = useState<Record<string, string>>({
-          title: "", description: "", color: "ef4444",
-          authorName: "", authorIcon: "", footerText: "", footerIcon: "",
-          thumbnail: "", image: "",
-        });
-        const [channelId, setChannelId] = useState("");
-        const [editMessageId, setEditMessageId] = useState("");
-        const [sending, setSending] = useState(false);
-        const [loadingEdit, setLoadingEdit] = useState(false);
-        const [result, setResult] = useState<{ type: "success" | "error"; text: string } | null>(null);
-        const setE = (k: string, v: string) => setEmbed((p) => ({ ...p, [k]: v }));
-
-        const loadExisting = async () => {
-          if (!editMessageId.trim()) return;
-          setLoadingEdit(true);
-          try {
-            const res = await fetch(`/api/settings/${guildId}?embed_msg=${editMessageId}`);
-            const data = await res.json();
-            if (data.embed) setEmbed(data.embed);
-            else setResult({ type: "error", text: "Could not find embed. Make sure the bot sent it." });
-          } catch { setResult({ type: "error", text: "Error loading embed." }); }
-          finally { setLoadingEdit(false); setTimeout(() => setResult(null), 4000); }
-        };
-
-        const sendEmbed = async () => {
-          if (!channelId) { setResult({ type: "error", text: "Select a channel." }); return; }
-          setSending(true);
-          try {
-            const res = await fetch(`/api/settings/${guildId}`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ module: "embed_send", settings: { embed, channelId, editMessageId: editMessageId || undefined } }),
-            });
-            const data = await res.json();
-            setResult({ type: data.success ? "success" : "error", text: data.message || data.error || "Done" });
-          } catch { setResult({ type: "error", text: "Network error." }); }
-          finally { setSending(false); setTimeout(() => setResult(null), 5000); }
-        };
-
-        return (
-          <>
-            <SectionHeader title="Edit Existing Embed (Optional)" />
-            <div className="section-row space-y-2">
-              <p className="text-xs text-gray-500">Load an existing embed by its message ID to edit it.</p>
-              <div className="flex gap-2">
-                <input type="text" value={editMessageId} onChange={(e) => setEditMessageId(e.target.value)}
-                  placeholder="Message ID" className="input flex-1 text-sm font-mono" />
-                <button onClick={loadExisting} disabled={loadingEdit || !editMessageId.trim()}
-                  className="btn-secondary text-xs px-3 flex items-center gap-1.5">
-                  {loadingEdit ? <Loader2 size={12} className="animate-spin" /> : <Eye size={12} />} Load
-                </button>
-              </div>
-            </div>
-
-            <SectionHeader title="Embed Builder" />
-            <div className="p-4 rounded-xl bg-[#0a0a0a] border border-[#1e1e1e] space-y-3">
-              <div>
-                <p className="text-xs text-gray-500 mb-1">Embed Color</p>
-                <div className="flex gap-2">
-                  <input type="color" value={`#${embed.color.replace("#", "")}`}
-                    onChange={(e) => setE("color", e.target.value.replace("#", ""))}
-                    className="w-10 h-9 rounded cursor-pointer border border-[#2a2a2a] bg-transparent" />
-                  <input type="text" value={embed.color} onChange={(e) => setE("color", e.target.value.replace("#", ""))}
-                    placeholder="ef4444" className="input flex-1 font-mono text-sm" />
-                </div>
-              </div>
-              <div><p className="text-xs text-gray-500 mb-1">Author Name</p>
-                <input type="text" value={embed.authorName} onChange={(e) => setE("authorName", e.target.value)} placeholder="Author name" className="input text-sm" /></div>
-              <div><p className="text-xs text-gray-500 mb-1">Author Icon URL</p>
-                <input type="text" value={embed.authorIcon} onChange={(e) => setE("authorIcon", e.target.value)} placeholder="https://..." className="input text-sm" /></div>
-              <div><p className="text-xs text-gray-500 mb-1">Title</p>
-                <input type="text" value={embed.title} onChange={(e) => setE("title", e.target.value)} placeholder="Embed title" className="input text-sm" /></div>
-              <div><p className="text-xs text-gray-500 mb-1">Description</p>
-                <textarea value={embed.description} onChange={(e) => setE("description", e.target.value)}
-                  rows={4} placeholder="Embed description..." className="input" style={{ resize: "vertical" }} /></div>
-              <div className="grid grid-cols-2 gap-3">
-                <div><p className="text-xs text-gray-500 mb-1">Thumbnail URL</p>
-                  <input type="text" value={embed.thumbnail} onChange={(e) => setE("thumbnail", e.target.value)} placeholder="https://..." className="input text-sm" /></div>
-                <div><p className="text-xs text-gray-500 mb-1">Image URL</p>
-                  <input type="text" value={embed.image} onChange={(e) => setE("image", e.target.value)} placeholder="https://..." className="input text-sm" /></div>
-              </div>
-              <div><p className="text-xs text-gray-500 mb-1">Footer Text</p>
-                <input type="text" value={embed.footerText} onChange={(e) => setE("footerText", e.target.value)} placeholder="Footer text" className="input text-sm" /></div>
-              <div><p className="text-xs text-gray-500 mb-1">Footer Icon URL</p>
-                <input type="text" value={embed.footerIcon} onChange={(e) => setE("footerIcon", e.target.value)} placeholder="https://..." className="input text-sm" /></div>
-            </div>
-
-            <SectionHeader title="Live Preview" />
-            <DiscordEmbedPreview embed={embed} />
-
-            <SectionHeader title="Send Embed" />
-            <div className="section-row space-y-2">
-              <select value={channelId} onChange={(e) => setChannelId(e.target.value)} className="input">
-                <option value="">— Select Channel —</option>
-                {channels.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-              <button onClick={sendEmbed} disabled={sending || !channelId}
-                className="btn-primary w-full flex items-center justify-center gap-2">
-                {sending ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
-                {sending ? "Sending…" : editMessageId ? "Edit Embed" : "Send Embed"}
-              </button>
-              {result && (
-                <p className={`text-xs ${result.type === "success" ? "text-green-400" : "text-red-400"}`}>{result.text}</p>
-              )}
-            </div>
-          </>
-        );
-      })()}
+      {moduleId === "embeds" && <EmbedsPanel channels={channels} guildId={guildId} />}
 
       {/* ── MINECRAFT STATUS ──────────────────────────────── */}
       {moduleId === "minecraft" && (() => {
@@ -1535,70 +1614,7 @@ export default function ModulePanel({ moduleId, guildId, isPremium, isOwner, set
       })()}
 
       {/* ── IGNORE SETUP ──────────────────────────────────── */}
-      {moduleId === "ignore" && (() => {
-        const ig = local;
-        const ignoredChannels: string[] = (ig.channels as string[]) || [];
-        const ignoredUsers: string[] = (ig.users as string[]) || [];
-        const bypassRoles: string[] = (ig.bypassRoles as string[]) || [];
-        const [newUser, setNewUser] = useState("");
-
-        return (
-          <>
-            <Banner color="gray">Configure which channels, users and roles are ignored by the bot globally.</Banner>
-
-            <SectionHeader title="Ignored Channels" />
-            <p className="text-xs text-gray-500 mb-2">Bot ignores all commands in these channels.</p>
-            <div className="flex flex-wrap gap-1.5 mb-2 min-h-[24px]">
-              {ignoredChannels.length === 0 && <span className="text-xs text-gray-600 italic">None</span>}
-              {ignoredChannels.map((cid) => {
-                const ch = channels.find((c) => c.id === cid);
-                return (
-                  <span key={cid} className="flex items-center gap-1 text-xs bg-[#1c1c1c] text-gray-300 px-2 py-1 rounded-full border border-[#2a2a2a]">
-                    {ch ? ch.name : cid}
-                    <button onClick={() => set("channels", ignoredChannels.filter((x) => x !== cid))}
-                      className="text-gray-500 hover:text-red-400"><X size={10} /></button>
-                  </span>
-                );
-              })}
-            </div>
-            <select defaultValue="" onChange={(e) => {
-              if (e.target.value && !ignoredChannels.includes(e.target.value)) {
-                set("channels", [...ignoredChannels, e.target.value]);
-                e.target.value = "";
-              }
-            }} className="input mb-4">
-              <option value="">— Add Channel to Ignore —</option>
-              {channels.filter((c) => !ignoredChannels.includes(c.id)).map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
-
-            <SectionHeader title="Ignored Users" />
-            <p className="text-xs text-gray-500 mb-2">Bot ignores all commands from these users.</p>
-            <div className="flex flex-wrap gap-1.5 mb-2 min-h-[24px]">
-              {ignoredUsers.length === 0 && <span className="text-xs text-gray-600 italic">None</span>}
-              {ignoredUsers.map((uid) => (
-                <span key={uid} className="flex items-center gap-1 text-xs bg-[#1c1c1c] text-gray-300 px-2 py-1 rounded-full border border-[#2a2a2a]">
-                  {uid}
-                  <button onClick={() => set("users", ignoredUsers.filter((x) => x !== uid))}
-                    className="text-gray-500 hover:text-red-400"><X size={10} /></button>
-                </span>
-              ))}
-            </div>
-            <div className="flex gap-2 mb-4">
-              <input type="text" value={newUser} onChange={(e) => setNewUser(e.target.value)}
-                placeholder="User ID" className="input flex-1 text-sm"
-                onKeyDown={(e) => { if (e.key === "Enter" && newUser.trim()) { set("users", [...ignoredUsers, newUser.trim()]); setNewUser(""); } }} />
-              <button onClick={() => { if (newUser.trim()) { set("users", [...ignoredUsers, newUser.trim()]); setNewUser(""); } }}
-                className="btn-secondary text-xs px-3"><Plus size={12} /></button>
-            </div>
-
-            <SectionHeader title="Bypass Roles" />
-            <p className="text-xs text-gray-500 mb-2">These roles bypass all ignore settings.</p>
-            <RowMultiRole label="Bypass Roles" roles={roles} values={bypassRoles} onChange={(v) => set("bypassRoles", v)} />
-          </>
-        );
-      })()}
+      {moduleId === "ignore" && <IgnorePanel local={local} set={set} channels={channels} roles={roles} />}
 
       {/* Save Bar */}
       {moduleId !== "embeds" && (
