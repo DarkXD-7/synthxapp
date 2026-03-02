@@ -21,6 +21,7 @@ export default function Navbar() {
     { href: "/", label: "Home" },
     { href: "/features", label: "Features" },
     { href: "/docs", label: "Docs" },
+    { href: "/hosting", label: "Hosting" },
     { href: "/support", label: "Support" },
   ];
 
