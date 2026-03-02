@@ -55,16 +55,16 @@ export default function HeroSection() {
         {/* Badge */}
         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-[#2a2a2a] bg-[#0f0f0f] text-xs text-gray-400 mb-6">
           <span className="w-1.5 h-1.5 rounded-full bg-green-400 dot-pulse" />
-          All systems online
+          online
         </div>
 
         {/* Headline */}
         <h1 className="font-display text-5xl sm:text-6xl md:text-7xl font-bold leading-[1.05] mb-6">
-          The <span className="gradient-text">all-in-one</span><br />Discord bot
+           <span className="gradient-text">SynthX</span><br />Protection Engine
         </h1>
 
         <p className="text-gray-400 text-lg max-w-xl mx-auto mb-10 leading-relaxed">
-          Security, moderation, music, leveling, and more — all in one powerful bot with a professional dashboard.
+          Advanced Security,Moderation with Automod, Ticket system, and essential server tools - managed through a modern, professional dashboard.
         </p>
 
         {/* CTA */}
