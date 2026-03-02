@@ -18,7 +18,7 @@ interface Props {
   onSave: (module: string, settings: Record<string, unknown>) => void;
 }
 
-// ─── Primitive UI components ────────────────────────────────────────────────
+// ─── Primitive UI componentss ────────────────────────────────────────────────
 
 function RowToggle({ label, desc, checked, onChange, disabled }: {
   label: string; desc?: string; checked: boolean;
