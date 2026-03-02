@@ -7,8 +7,8 @@ export default function SupportPage() {
   const options = [
     {
       // Custom icon — put your image at public/icons/discord.png
-      iconImg: "/icons/discord.png",
-      title: "Discord Support Server",
+      iconImg: "/discord.png",
+      title: "SynthX Development",
       desc: "Join our community server for real-time support from staff and the community.",
       href: "https://discord.gg/WKX5HHPmWz",
       label: "Join Server",
@@ -24,9 +24,9 @@ export default function SupportPage() {
     },
     {
       // Custom icon — put your image at public/icons/hostzy.png
-      iconImg: "/icons/hostzy.png",
-      title: "Hosting Support",
-      desc: "Need help with bot hosting? Contact our hosting partner Hostzy.",
+      iconImg: "/hostzy.png",
+      title: "Hostzy Support",
+      desc: "Need help with hosting? Contact our hosting partner Hostzy.",
       href: "https://discord.gg/yQ4wyBDqYQ",
       label: "Hostzy Discord",
       color: "from-orange-500 to-yellow-500",
