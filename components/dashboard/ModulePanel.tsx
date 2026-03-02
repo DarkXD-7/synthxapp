@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, ReactNode, ElementType, Dispatch, SetStateAction } from "react";
 import {
   Shield, Star, Gift, Settings2, Users2, Bell, Moon, Save, Loader2,
   CheckCircle, AlertTriangle, X, Lock, Hammer, Sliders, Repeat2,
@@ -174,7 +174,7 @@ function RowDropdown({ label, desc, options, value, onChange, disabled }: {
   );
 }
 
-function Banner({ color, children }: { color: "yellow" | "blue" | "red" | "green" | "gray"; children: React.ReactNode }) {
+function Banner({ color, children }: { color: "yellow" | "blue" | "red" | "green" | "gray"; children: ReactNode }) {
   const cls = { yellow: "info-yellow", blue: "info-blue", red: "info-red", green: "info-green", gray: "info-gray" }[color];
   return <div className={`info-banner ${cls} my-2`}>{children}</div>;
 }
@@ -228,7 +228,7 @@ function PremiumGate({ title }: { title: string }) {
 }
 
 // Module metadata
-const META: Record<string, { title: string; icon: React.ElementType; iconColor: string; premium?: boolean; ownerOnly?: boolean }> = {
+const META: Record<string, { title: string; icon: ElementType; iconColor: string; premium?: boolean; ownerOnly?: boolean }> = {
   antinuke:     { title: "Anti-Nuke",         icon: Shield,    iconColor: "#f87171", ownerOnly: true },
   automod:      { title: "AutoMod",            icon: Settings2, iconColor: "#fb923c" },
   logging:      { title: "Logging",            icon: Bell,      iconColor: "#818cf8" },
@@ -611,7 +611,7 @@ function AutomodPanel({ local, set, channels, roles }: {
 
 function WelcomePanel({ local, set, setLocal, channels, guildId }: {
   local: Record<string, unknown>; set: (k: string, v: unknown) => void;
-  setLocal: React.Dispatch<React.SetStateAction<Record<string, unknown>>>;
+  setLocal: Dispatch<SetStateAction<Record<string, unknown>>>;
   channels: Channel[]; guildId: string;
 }) {
   const wc = local;
@@ -744,8 +744,8 @@ function WelcomePanel({ local, set, setLocal, channels, guildId }: {
               color: embed.color, authorName: embed.authorName, authorIcon: embed.authorIcon,
               title: (embed.title || "").replace("{server_name}", "Your Server"),
               description: (embed.description || "").replace("{user_mention}", "@NewMember").replace("{user_name}", "NewMember").replace("{server_name}", "Your Server").replace("{server_membercount}", "1234"),
-              thumbnail: embed.thumbnail?.startsWith("__") ? undefined : embed.thumbnail,
-              image: embed.image?.startsWith("__") ? wc.bannerPreview as string : embed.image,
+              thumbnail: embed.thumbnail?.startsWith("__") ? "" : (embed.thumbnail || ""),
+              image: embed.image?.startsWith("__") ? (wc.bannerPreview as string || "") : (embed.image || ""),
               footerText: embed.footerText, footerIcon: embed.footerIcon,
             }} />
           </div>
