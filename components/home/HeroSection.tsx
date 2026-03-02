@@ -71,7 +71,7 @@ export default function HeroSection() {
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
           {session ? (
             <Link href="/dashboard" className="btn-primary text-base px-6 py-3">
-              Open Dashboard <ArrowRight size={16} />
+              Dashboard <ArrowRight size={16} />
             </Link>
           ) : (
             <button onClick={() => signIn("discord")} className="btn-primary text-base px-6 py-3">
@@ -93,7 +93,7 @@ export default function HeroSection() {
           {[
             { icon: Shield, label: "Anti-Nuke", color: "#f87171" },
             { icon: Zap,    label: "AutoMod",   color: "#fb923c" },
-            { icon: Star,   label: "Leveling",  color: "#facc15" },
+            { icon: Star,   label: "Tickets",  color: "#facc15" },
           ].map(({ icon: Icon, label, color }) => (
             <div key={label} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#0f0f0f] border border-[#1e1e1e] text-xs text-gray-400">
               <Icon size={12} style={{ color }} />
