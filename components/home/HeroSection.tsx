@@ -25,7 +25,7 @@ export default function HeroSection() {
           {/* Banner image */}
           <div className="relative w-full h-36 rounded-2xl overflow-hidden">
             <Image
-              src="/banner.png"
+              src="/banner.jpg"
               alt="SynthX Banner"
               fill
               className="object-cover"
