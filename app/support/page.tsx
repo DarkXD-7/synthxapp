@@ -7,12 +7,12 @@ export default function SupportPage() {
   const options = [
     {
       // Custom icon — put your image at public/icons/discord.png
-      iconImg: "/synthx.jpg",
+      iconImg: "/synthx.png",
       title: "SynthX Development",
       desc: "Join our community server for real-time support from staff and the community.",
       href: "https://discord.gg/WKX5HHPmWz",
       label: "Join Server",
-      color: "from-[#5865F2] to-[#4752C4]",
+      color: "from-[#df1b1b] to-[#ba3030]",
     },
     {
       iconImg: null, // uses lucide icon fallback below
@@ -29,7 +29,7 @@ export default function SupportPage() {
       desc: "Need help with hosting? Contact our hosting partner Hostzy.",
       href: "https://discord.gg/yQ4wyBDqYQ",
       label: "Hostzy Discord",
-      color: "from-orange-500 to-yellow-500",
+      color: "from-[#000000] to-[#000000]",
     },
   ];
 
