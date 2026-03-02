@@ -12,46 +12,45 @@ export default function HeroSection() {
     <section className="min-h-screen flex flex-col items-center justify-center px-4 pt-16 pb-12 relative overflow-hidden">
       {/* Subtle background */}
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full" style={{background:"radial-gradient(circle, rgba(239,68,68,0.04) 0%, transparent 70%)"}} />
+        <div
+          className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full"
+          style={{ background: "radial-gradient(circle, rgba(239,68,68,0.04) 0%, transparent 70%)" }}
+        />
       </div>
 
       <div className="text-center max-w-3xl mx-auto relative z-10">
-        {/* Logo with Discord-style banner */}
-        <div className="relative mx-auto mb-10 w-64">
-          {/* Banner */}
-          <div
-            className="w-full h-24 rounded-2xl"
-            style={{
-              background: "linear-gradient(135deg, #1a0505 0%, #3d0a0a 30%, #7f1010 60%, #ef4444 85%, #f97316 100%)",
-              boxShadow: "0 0 40px rgba(239,68,68,0.3)",
-            }}
-          >
-            {/* Shimmer overlay on banner */}
-            <div
-              className="w-full h-full rounded-2xl opacity-40"
-              style={{
-                background: "radial-gradient(ellipse at 70% 50%, rgba(249,115,22,0.6) 0%, transparent 60%)",
-              }}
-            />
-         </div>
 
-  {/* Circle logo sitting on top of banner */}
-  <div className="absolute -bottom-8 left-1/2 -translate-x-1/2">
-    <div
-      className="w-20 h-20 rounded-full p-1"
-      style={{
-        background: "linear-gradient(135deg, #ef4444, #f97316)",
-        boxShadow: "0 0 20px rgba(239,68,68,0.5)",
-      }}
-    >
-      <div className="w-full h-full rounded-full overflow-hidden bg-[#0a0a0a] flex items-center justify-center">
-        <div className="relative w-14 h-14">
-          <Image src="/bot-logo.png" alt="SynthX" fill className="object-contain" priority />
+        {/* ── Discord-style banner + logo ── */}
+        <div className="relative mx-auto mb-16 w-full max-w-lg">
+          {/* Banner image */}
+          <div className="relative w-full h-36 rounded-2xl overflow-hidden">
+            <Image
+              src="/banner.png"
+              alt="SynthX Banner"
+              fill
+              className="object-cover"
+              priority
+            />
+            {/* Dark fade at bottom so logo blends in naturally */}
+            <div
+              className="absolute bottom-0 left-0 right-0 h-14"
+              style={{ background: "linear-gradient(to bottom, transparent, rgba(0,0,0,0.75))" }}
+            />
+          </div>
+
+          {/* Logo avatar sitting on the bottom edge of the banner — no ring */}
+          <div className="absolute -bottom-10 left-1/2 -translate-x-1/2">
+            <div className="relative w-20 h-20 rounded-full overflow-hidden bg-[#0a0a0a] border-4 border-[#0a0a0a]">
+              <Image
+                src="/bot-logo.png"
+                alt="SynthX"
+                fill
+                className="object-contain"
+                priority
+              />
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
-  </div>
-</div>
 
         {/* Badge */}
         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-[#2a2a2a] bg-[#0f0f0f] text-xs text-gray-400 mb-6">
@@ -81,7 +80,8 @@ export default function HeroSection() {
           )}
           <a
             href={`https://discord.com/oauth2/authorize?client_id=${process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID}&permissions=8&scope=bot%20applications.commands`}
-            target="_blank" rel="noopener noreferrer"
+            target="_blank"
+            rel="noopener noreferrer"
             className="btn-secondary text-base px-6 py-3"
           >
             Invite to Server
