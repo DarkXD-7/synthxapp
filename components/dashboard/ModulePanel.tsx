@@ -433,7 +433,7 @@ function AntinukePanel({ local, set, readOnly, guildId }: {
       <div className="section-row space-y-2">
         <p className="text-sm font-medium text-white">Extra Owner</p>
         <p className="text-xs text-gray-500">This user gets the same Anti-Nuke access as the server owner.</p>
-        {an.extraOwner && (
+        {Boolean(an.extraOwner) && (
           <div className="flex items-center gap-2 text-xs bg-orange-500/10 border border-orange-500/20 text-orange-300 px-3 py-2 rounded-lg">
             <Crown size={12} />
             Current Extra Owner: <code>{String(an.extraOwner)}</code>
