@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";;
+import { authOptions } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -9,16 +9,16 @@ const BOT_API_KEY = process.env.BOT_API_KEY || "";
 
 export async function POST(
   request: NextRequest,
-  context: { params: { guildId: string } }
+  context: { params: Promise<{ guildId: string }> }
 ) {
   const session = await getServerSession(authOptions);
   if (!session?.accessToken) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { guildId } = context.params;
+  const { guildId } = await context.params;
   const body = await request.json();
-  const { action, url, text } = body;
+  const { action, iconBase64, bannerBase64, aboutText } = body;
 
   if (!action) {
     return NextResponse.json({ error: "Missing action" }, { status: 400 });
@@ -35,19 +35,24 @@ export async function POST(
       return NextResponse.json({ error: "Premium required for bot profile customization" }, { status: 403 });
     }
   } catch {
-    return NextResponse.json({ error: "Cannot verify premium status" }, { status: 503 });
+    return NextResponse.json({ error: "Bot API unreachable — cannot verify premium" }, { status: 503 });
   }
 
-  // Forward to bot
+  // Forward to bot with the right field names it expects
   try {
+    const payload: Record<string, unknown> = { action };
+    if (iconBase64)   payload.iconBase64   = iconBase64;
+    if (bannerBase64) payload.bannerBase64 = bannerBase64;
+    if (aboutText)    payload.aboutText    = aboutText;
+
     const res = await fetch(`${BOT_API_URL}/api/botprofile/${guildId}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "X-API-Key": BOT_API_KEY,
       },
-      body: JSON.stringify({ action, url, text }),
-      signal: AbortSignal.timeout(15000),
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(20000), // 20s — image upload can be slow
     });
 
     const data = await res.json();
@@ -58,6 +63,7 @@ export async function POST(
 
     return NextResponse.json(data);
   } catch (e) {
+    console.error("[botprofile] Error:", e);
     return NextResponse.json({ error: "Bot API unreachable" }, { status: 503 });
   }
 }
