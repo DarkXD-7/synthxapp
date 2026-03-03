@@ -137,12 +137,7 @@ export default function BotProfilePanel({ guildId, isPremium }: Props) {
           <span>All changes below apply only to <strong>this server</strong>. The bot&apos;s global avatar will not be changed.</span>
         </div>
       </div>
-        <p className="text-sm text-gray-500">Customise the bot&apos;s profile — changes only apply to <strong className="text-gray-300">this server</strong>, not globally.</p>
-        <div className="flex items-center gap-2 mt-2 px-3 py-2 rounded-lg bg-blue-500/5 border border-blue-500/10 text-xs text-blue-300">
-          <span>ℹ️</span>
-          <span>Icon &amp; banner changes are scoped to this guild only. Other servers will see the default bot avatar.</span>
-        </div>
-      </div>
+
 
       {/* Toast */}
       {msg && (
