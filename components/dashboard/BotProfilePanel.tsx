@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Star, Upload, Loader2, CheckCircle, AlertTriangle } from "lucide-react";
+import { Star, Upload, Loader2, CheckCircle, AlertTriangle, Bot } from "lucide-react";
 
 interface Props { guildId: string; isPremium: boolean; }
 
@@ -122,9 +122,26 @@ export default function BotProfilePanel({ guildId, isPremium }: Props) {
 
   return (
     <div className="max-w-2xl space-y-5 animate-fade-in">
-      <div>
-        <h1 className="text-xl font-bold text-white mb-0.5">Bot Profile</h1>
-        <p className="text-sm text-gray-500">Customise SynthX&apos;s icon, banner, and about section for this server.</p>
+      <div className="pb-4 border-b border-[#1a1a1a]">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-11 h-11 rounded-2xl flex items-center justify-center" style={{background:"rgba(192,132,252,0.1)", border:"1px solid rgba(192,132,252,0.2)"}}>
+            <Bot size={20} className="text-purple-400" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-white">Bot Profile</h1>
+            <p className="text-xs text-gray-600">Per-server customization • changes are guild-scoped only</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-500/5 border border-blue-500/10 text-xs text-blue-300">
+          <span>ℹ️</span>
+          <span>All changes below apply only to <strong>this server</strong>. The bot&apos;s global avatar will not be changed.</span>
+        </div>
+      </div>
+        <p className="text-sm text-gray-500">Customise the bot&apos;s profile — changes only apply to <strong className="text-gray-300">this server</strong>, not globally.</p>
+        <div className="flex items-center gap-2 mt-2 px-3 py-2 rounded-lg bg-blue-500/5 border border-blue-500/10 text-xs text-blue-300">
+          <span>ℹ️</span>
+          <span>Icon &amp; banner changes are scoped to this guild only. Other servers will see the default bot avatar.</span>
+        </div>
       </div>
 
       {/* Toast */}
@@ -149,7 +166,7 @@ export default function BotProfilePanel({ guildId, isPremium }: Props) {
       {/* Bot Icon */}
       <div className="card p-5 space-y-3">
         <p className="text-sm font-semibold text-white">Bot Icon</p>
-        <p className="text-xs text-gray-500">Upload a custom avatar for the bot in this server.</p>
+        <p className="text-xs text-gray-500">Upload a custom avatar for the bot. This will only show in <strong className="text-white">this server</strong>.</p>
         <div
           className="upload-zone cursor-pointer"
           onClick={() => iconRef.current?.click()}
@@ -183,7 +200,7 @@ export default function BotProfilePanel({ guildId, isPremium }: Props) {
       {/* Banner */}
       <div className="card p-5 space-y-3">
         <p className="text-sm font-semibold text-white">Bot Banner</p>
-        <p className="text-xs text-gray-500">Upload a banner image shown on the bot&apos;s profile.</p>
+        <p className="text-xs text-gray-500">Upload a banner shown on the bot&apos;s profile in <strong className="text-white">this server</strong> only.</p>
         <div
           className="upload-zone cursor-pointer"
           onClick={() => bannerRef.current?.click()}

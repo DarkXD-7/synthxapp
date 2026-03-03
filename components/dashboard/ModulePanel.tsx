@@ -26,7 +26,7 @@ function RowToggle({ label, desc, checked, onChange, disabled }: {
   onChange: (v: boolean) => void; disabled?: boolean;
 }) {
   return (
-    <div className="section-row flex items-center justify-between gap-4">
+    <div className="flex items-center justify-between gap-4 py-3 px-4 rounded-xl bg-[#0a0a0a] border border-[#1a1a1a] mb-1.5 transition-all hover:border-[#252525]">
       <div>
         <p className="text-sm font-medium text-white">{label}</p>
         {desc && <p className="text-xs text-gray-500 mt-0.5">{desc}</p>}
@@ -44,12 +44,12 @@ function RowSelect({ label, desc, channels, value, onChange, disabled, placehold
   value: string; onChange: (v: string) => void; disabled?: boolean; placeholder?: string;
 }) {
   return (
-    <div className="section-row">
+    <div className="py-3 px-4 rounded-xl bg-[#0a0a0a] border border-[#1a1a1a] mb-1.5 transition-all hover:border-[#252525]">
       <p className="text-sm font-medium text-white mb-1">{label}</p>
       {desc && <p className="text-xs text-gray-500 mb-2">{desc}</p>}
       <select value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled} className="input">
         <option value="">{placeholder || "— Select Channel —"}</option>
-        {channels.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+        {channels.map((c) => <option key={c.id} value={c.id}># {c.name}</option>)}
       </select>
     </div>
   );
@@ -60,12 +60,12 @@ function RowRoleSelect({ label, desc, roles, value, onChange, disabled }: {
   value: string; onChange: (v: string) => void; disabled?: boolean;
 }) {
   return (
-    <div className="section-row">
+    <div className="py-3 px-4 rounded-xl bg-[#0a0a0a] border border-[#1a1a1a] mb-1.5 transition-all hover:border-[#252525]">
       <p className="text-sm font-medium text-white mb-1">{label}</p>
       {desc && <p className="text-xs text-gray-500 mb-2">{desc}</p>}
       <select value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled} className="input">
         <option value="">— Select Role —</option>
-        {roles.map((r) => <option key={r.id} value={r.id}>@{r.name}</option>)}
+        {roles.map((r) => <option key={r.id} value={r.id}>@ {r.name}</option>)}
       </select>
     </div>
   );
@@ -113,7 +113,7 @@ function RowTextarea({ label, desc, value, onChange, placeholder, disabled, rows
   onChange: (v: string) => void; placeholder?: string; disabled?: boolean; rows?: number;
 }) {
   return (
-    <div className="section-row">
+    <div className="py-3 px-4 rounded-xl bg-[#0a0a0a] border border-[#1a1a1a] mb-1.5 transition-all hover:border-[#252525]">
       <p className="text-sm font-medium text-white mb-1">{label}</p>
       {desc && <p className="text-xs text-gray-500 mb-2">{desc}</p>}
       <textarea value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder}
@@ -127,7 +127,7 @@ function RowInput({ label, desc, value, onChange, placeholder, disabled, type = 
   onChange: (v: string) => void; placeholder?: string; disabled?: boolean; type?: string;
 }) {
   return (
-    <div className="section-row">
+    <div className="py-3 px-4 rounded-xl bg-[#0a0a0a] border border-[#1a1a1a] mb-1.5 transition-all hover:border-[#252525]">
       <p className="text-sm font-medium text-white mb-1">{label}</p>
       {desc && <p className="text-xs text-gray-500 mb-2">{desc}</p>}
       <input type={type} value={value} onChange={(e) => onChange(e.target.value)}
@@ -141,15 +141,13 @@ function RowNum({ label, desc, value, onChange, min, max, disabled }: {
   onChange: (v: number) => void; min?: number; max?: number; disabled?: boolean;
 }) {
   return (
-    <div className="section-row">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm font-medium text-white">{label}</p>
-          {desc && <p className="text-xs text-gray-500 mt-0.5">{desc}</p>}
-        </div>
-        <input type="number" value={value} min={min} max={max} disabled={disabled}
-          onChange={(e) => onChange(Number(e.target.value))} className="input w-24 text-right" />
+    <div className="flex items-center justify-between gap-4 py-3 px-4 rounded-xl bg-[#0a0a0a] border border-[#1a1a1a] mb-1.5 transition-all hover:border-[#252525]">
+      <div>
+        <p className="text-sm font-medium text-white">{label}</p>
+        {desc && <p className="text-xs text-gray-500 mt-0.5">{desc}</p>}
       </div>
+      <input type="number" value={value} min={min} max={max} disabled={disabled}
+        onChange={(e) => onChange(Number(e.target.value))} className="input w-24 text-right" style={{width:'96px',flexShrink:0}} />
     </div>
   );
 }
@@ -160,16 +158,14 @@ function RowDropdown({ label, desc, options, value, onChange, disabled }: {
   value: string; onChange: (v: string) => void; disabled?: boolean;
 }) {
   return (
-    <div className="section-row">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-sm font-medium text-white">{label}</p>
-          {desc && <p className="text-xs text-gray-500 mt-0.5">{desc}</p>}
-        </div>
-        <select value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled} className="input w-44">
-          {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-        </select>
+    <div className="flex items-start justify-between gap-4 py-3 px-4 rounded-xl bg-[#0a0a0a] border border-[#1a1a1a] mb-1.5 transition-all hover:border-[#252525]">
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-white">{label}</p>
+        {desc && <p className="text-xs text-gray-500 mt-0.5">{desc}</p>}
       </div>
+      <select value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled} className="input" style={{width:'176px',flexShrink:0}}>
+        {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+      </select>
     </div>
   );
 }
@@ -206,7 +202,11 @@ function UploadField({ label, desc, accept, onFile, preview }: {
 }
 
 function SectionHeader({ title }: { title: string }) {
-  return <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mt-5 mb-2 pb-1 border-b border-[#1e1e1e]">{title}</p>;
+  return (
+    <div className="config-group-title mt-5 mb-3">
+      {title}
+    </div>
+  );
 }
 
 function PremiumGate({ title }: { title: string }) {
@@ -1217,19 +1217,24 @@ export default function ModulePanel({ moduleId, guildId, isPremium, isOwner, set
   const Icon = meta.icon;
 
   return (
-    <div className="max-w-2xl space-y-1 animate-fade-in">
+    <div className="max-w-2xl animate-fade-in">
       {/* Module Header */}
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-          style={{ background: `${meta.iconColor}1a`, border: `1px solid ${meta.iconColor}33` }}>
-          <Icon size={18} style={{ color: meta.iconColor }} />
+      <div className="flex items-center gap-4 mb-6 pb-4 border-b border-[#1a1a1a]">
+        <div className="w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0 transition-transform hover:scale-105"
+          style={{ background: `${meta.iconColor}15`, border: `1px solid ${meta.iconColor}30`, boxShadow: `0 4px 16px ${meta.iconColor}18` }}>
+          <Icon size={20} style={{ color: meta.iconColor }} />
         </div>
-        <div>
-          <h2 className="text-lg font-bold text-white">{meta.title}</h2>
-          {readOnly && (
-            <span className="text-xs text-orange-400 flex items-center gap-1"><Lock size={10} /> Owner-only — view mode</span>
+        <div className="flex-1 min-w-0">
+          <h2 className="text-xl font-bold text-white leading-tight">{meta.title}</h2>
+          {readOnly ? (
+            <span className="text-xs text-orange-400 flex items-center gap-1 mt-0.5"><Lock size={10} /> Owner-only — view mode</span>
+          ) : (
+            <p className="text-xs text-gray-600 mt-0.5">Configure module settings below</p>
           )}
         </div>
+        {meta.premium && isPremium && (
+          <span className="pill pill-purple text-[10px]">✦ Premium</span>
+        )}
       </div>
 
       {/* ── ANTINUKE ──────────────────────────────────────── */}
