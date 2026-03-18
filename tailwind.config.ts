@@ -9,60 +9,71 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        primary: {
-          50: "#fff1f1",
-          100: "#ffe4e4",
-          200: "#ffc9c9",
-          300: "#ff9e9e",
-          400: "#ff6b6b",
-          500: "#ff3d3d",
-          600: "#ef1515",
-          700: "#c90d0d",
-          800: "#a60f0f",
-          900: "#8a1414",
+        purple: {
+          400: "#c4a4fc",
+          500: "#a855f7",
+          600: "#9333ea",
+          700: "#7e22ce",
         },
-        orange: {
-          400: "#fb923c",
-          500: "#f97316",
-          600: "#ea580c",
+        violet: {
+          400: "#c084fc",
+          500: "#a855f7",
+          600: "#9333ea",
+          700: "#7e22ce",
+        },
+        primary: {
+          50: "#faf5ff",
+          100: "#f3e8ff",
+          200: "#e9d5ff",
+          300: "#d8b4fe",
+          400: "#c084fc",
+          500: "#a855f7",
+          600: "#9333ea",
+          700: "#7e22ce",
+          800: "#6b21a8",
+          900: "#581c87",
         },
         dark: {
-          50: "#2a2a2a",
-          100: "#1f1f1f",
-          200: "#181818",
-          300: "#141414",
-          400: "#0f0f0f",
-          500: "#0a0a0a",
+          50: "#3d2d5c",
+          100: "#2d1f47",
+          200: "#211335",
+          300: "#1a1028",
+          400: "#120820",
+          500: "#0a0a14",
         },
       },
       backgroundImage: {
         "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
-        "hero-gradient":
-          "linear-gradient(135deg, #0a0a0a 0%, #1a0505 50%, #0a0a0a 100%)",
-        "card-gradient":
-          "linear-gradient(145deg, rgba(255,60,60,0.1), rgba(249,115,22,0.05))",
-        "red-orange": "linear-gradient(135deg, #ef1515, #f97316)",
+        "hero-gradient": "linear-gradient(135deg, #0a0a14 0%, #1a1028 50%, #0a0a14 100%)",
+        "card-gradient": "linear-gradient(145deg, rgba(139, 92, 246, 0.15), rgba(168, 85, 247, 0.08))",
+        "purple-gradient": "linear-gradient(135deg, #8B5CF6, #A855F7, #C084FC)",
       },
       animation: {
         "fade-in": "fadeIn 0.6s ease-in-out",
         "slide-up": "slideUp 0.6s ease-out",
-        "slide-in-right": "slideInRight 0.5s ease-out",
+        "slide-in-left": "slideInLeft 0.6s ease-out",
+        "slide-in-right": "slideInRight 0.6s ease-out",
         float: "float 6s ease-in-out infinite",
-        glow: "glow 2s ease-in-out infinite alternate",
-        "pulse-red": "pulseRed 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+        glow: "glow 3s ease-in-out infinite alternate",
+        "pulse-purple": "pulsePurple 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
         shimmer: "shimmer 2s linear infinite",
+        "rotate-gradient": "rotateGradient 8s ease infinite",
       },
       keyframes: {
         fadeIn: {
-          "0%": { opacity: "0" },
-          "100%": { opacity: "1" },
-        },
-        slideUp: {
-          "0%": { opacity: "0", transform: "translateY(30px)" },
+          "0%": { opacity: "0", transform: "translateY(10px)" },
           "100%": { opacity: "1", transform: "translateY(0)" },
         },
+        slideUp: {
+          "0%": { opacity: "0", transform: "translateY(40px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        slideInLeft: {
+          "0%": { opacity: "0", transform: "translateX(-40px)" },
+          "100%": { opacity: "1", transform: "translateX(0)" },
+        },
         slideInRight: {
-          "0%": { opacity: "0", transform: "translateX(30px)" },
+          "0%": { opacity: "0", transform: "translateX(40px)" },
           "100%": { opacity: "1", transform: "translateX(0)" },
         },
         float: {
@@ -70,10 +81,10 @@ const config: Config = {
           "50%": { transform: "translateY(-20px)" },
         },
         glow: {
-          "0%": { boxShadow: "0 0 20px rgba(239,21,21,0.3)" },
-          "100%": { boxShadow: "0 0 40px rgba(249,115,22,0.6)" },
+          "0%": { boxShadow: "0 0 20px rgba(139, 92, 246, 0.4)" },
+          "100%": { boxShadow: "0 0 40px rgba(168, 85, 247, 0.6)" },
         },
-        pulseRed: {
+        pulsePurple: {
           "0%, 100%": { opacity: "1" },
           "50%": { opacity: "0.5" },
         },
@@ -81,9 +92,15 @@ const config: Config = {
           "0%": { backgroundPosition: "-200% 0" },
           "100%": { backgroundPosition: "200% 0" },
         },
+        rotateGradient: {
+          "0%": { backgroundPosition: "0% 50%" },
+          "50%": { backgroundPosition: "100% 50%" },
+          "100%": { backgroundPosition: "0% 50%" },
+        },
       },
       fontFamily: {
-        sans: ["Inter", "system-ui", "sans-serif"],
+        sans: ["DM Sans", "Inter", "system-ui", "sans-serif"],
+        display: ["Syne", "system-ui", "sans-serif"],
       },
     },
   },
